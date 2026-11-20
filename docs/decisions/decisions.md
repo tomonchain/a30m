@@ -1,22 +1,20 @@
 # Decisions
 
-## 166. Engines: the vendors' own agents, driven with the owner's own sign-in
+## 166. Our own model connectors first; the vendors' agents as optional subscription engines
 
-**Proposed** (founder, 20 November 2026: "I want it to connect to my Claude subscription, add all my subscriptions and switch between them as needed, automatically if possible"; then "more economical to use the subscription"; then "unify everything").
+**Proposed** (founder, 20 November 2026: "I want it to connect to my Claude subscription, add all my subscriptions and switch between them"; "more economical to use the subscription"; "unify everything"; then "or we redo the connectors for the main LLMs, GPT, Claude, Grok, Gemini").
 
-- **An agent runs on an engine.** a30m drives the vendors' own agents rather than reimplementing them: **Codex** (signed in with the owner's ChatGPT plan), **Claude Code** (signed in with the owner's Claude plan), agents speaking the open **ACP** protocol (Grok, Gemini, OpenCode…), **local models** (Ollama), and an **API key** as a last resort.
-- **The owner signs in to each engine on the server, through the vendor's own flow.** a30m never collects, stores or relays a plan's credentials or session tokens. Claude Code runs unmodified.
-- **What it costs, as the vendors meter it today:** Codex draws on the ChatGPT plan's agentic allowance. Claude Code driven by a30m is programmatic use, so it draws on the Claude plan's monthly Agent SDK credit, not on the interactive limits. Both are checked again before this is built; vendors change these rules.
-- **Choice per workspace and per agent,** with a default order (Codex, then Claude Code, then local models, then the API key) and a fallback when a credit runs out. a30m also routes by task: small or local models to sort and summarise, large ones to write.
-- **Never:** rotating several accounts of one vendor to get around its limits, or making programmatic use look interactive (driving a terminal as if the owner were typing). Both are what vendors block, and they put the owner's accounts at risk.
-- **Several accounts are fine where each has a reason:** one per workspace, for example Hedgen's work on Hedgen's account.
-- **No separate developer mode** (decision 163): coding is an agent's skill. The owner's own interactive work in Claude Code or ChatGPT stays outside a30m, on their plans.
-- **The gate holds for every engine:** each engine's tool calls reach a30m's gate (Claude Code's permission prompt tool, ACP's permission request, Codex's approvals), so what commits still waits for the owner.
-- **Spend is tracked per workspace and per engine.**
+- **The base is ours, in Rust, in a30m's own agent loop:** a connector for Claude (the Messages API), and one for the OpenAI-compatible API, which covers GPT, Grok, Gemini, Ollama and other compatible services. A native Gemini connector follows if its compatible mode proves unreliable with tools.
+- **A model is named `provider/model`** (`anthropic/claude-sonnet-5-5`, `openai/…`, `xai/…`, `gemini/…`, `ollama/…`), chosen per workspace and later per agent. The server holds one key per provider, from its environment; keys never reach a workspace, a conversation or a tool.
+- **The gate is native:** every connector's tool calls go through a30m's own loop and gate.
+- **Subscription engines come on top, as options:** **Codex** (signed in with the owner's ChatGPT plan) and **Claude Code** (signed in with the owner's Claude plan; programmatic use draws on the plan's Agent SDK credit). The owner signs in to each on the server through the vendor's own flow; a30m never collects, stores or relays a plan's credentials. Each engine's approvals are routed to a30m's gate. When an engine is connected a30m uses it first, and falls back to the connectors when its credit runs out.
+- **Routing by task:** small or local models to sort and summarise, large ones to write; spend tracked per workspace and per provider.
+- **Never:** rotating several accounts of one vendor to get around its limits, or making programmatic use look interactive.
+- **No OpenCode and no separate developer mode:** the connectors and the two engines cover what they would bring; coding is an agent's skill (decision 163).
 
-*Why:* the owner already pays for plans that include agents; driving those agents through their official sign-in is the supported and cheapest way to use them. Rebuilding each vendor's agent would be slower and worse.
+*Why:* our own connectors keep the gate native, need no other runtime on the server, and work with any key. The subscription engines add the economy the owner pays for already, through each vendor's supported path.
 
-*Cost:* one adapter per engine, each with its own way to stream work and ask for approval. a30m depends on vendors' terms that change often: every engine names its source and the date it was checked. Offering Claude sign-in inside a commercial a30m needs Anthropic's agreement first. Replaces the single Anthropic provider of decision 165.
+*Cost:* connectors are paid per token. Each provider's compatible mode has gaps (Gemini 3's thought signatures, Grok's server-side tools only in its Responses API). Two engine adapters to keep up with vendors' changes; every engine names its source and the date its terms were checked. Offering Claude sign-in inside a commercial a30m needs Anthropic's agreement first. Replaces the single provider of decision 165.
 
 ## 165. The first slice: local only, plain files, three dependencies
 
