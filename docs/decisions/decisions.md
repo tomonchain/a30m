@@ -1,5 +1,23 @@
 # Decisions
 
+## 166. Engines: the vendors' own agents, driven with the owner's own sign-in
+
+**Proposed** (founder, 20 November 2026: "I want it to connect to my Claude subscription, add all my subscriptions and switch between them as needed, automatically if possible"; then "more economical to use the subscription"; then "unify everything").
+
+- **An agent runs on an engine.** a30m drives the vendors' own agents rather than reimplementing them: **Codex** (signed in with the owner's ChatGPT plan), **Claude Code** (signed in with the owner's Claude plan), agents speaking the open **ACP** protocol (Grok, Gemini, OpenCode…), **local models** (Ollama), and an **API key** as a last resort.
+- **The owner signs in to each engine on the server, through the vendor's own flow.** a30m never collects, stores or relays a plan's credentials or session tokens. Claude Code runs unmodified.
+- **What it costs, as the vendors meter it today:** Codex draws on the ChatGPT plan's agentic allowance. Claude Code driven by a30m is programmatic use, so it draws on the Claude plan's monthly Agent SDK credit, not on the interactive limits. Both are checked again before this is built; vendors change these rules.
+- **Choice per workspace and per agent,** with a default order (Codex, then Claude Code, then local models, then the API key) and a fallback when a credit runs out. a30m also routes by task: small or local models to sort and summarise, large ones to write.
+- **Never:** rotating several accounts of one vendor to get around its limits, or making programmatic use look interactive (driving a terminal as if the owner were typing). Both are what vendors block, and they put the owner's accounts at risk.
+- **Several accounts are fine where each has a reason:** one per workspace, for example Hedgen's work on Hedgen's account.
+- **No separate developer mode** (decision 163): coding is an agent's skill. The owner's own interactive work in Claude Code or ChatGPT stays outside a30m, on their plans.
+- **The gate holds for every engine:** each engine's tool calls reach a30m's gate (Claude Code's permission prompt tool, ACP's permission request, Codex's approvals), so what commits still waits for the owner.
+- **Spend is tracked per workspace and per engine.**
+
+*Why:* the owner already pays for plans that include agents; driving those agents through their official sign-in is the supported and cheapest way to use them. Rebuilding each vendor's agent would be slower and worse.
+
+*Cost:* one adapter per engine, each with its own way to stream work and ask for approval. a30m depends on vendors' terms that change often: every engine names its source and the date it was checked. Offering Claude sign-in inside a commercial a30m needs Anthropic's agreement first. Replaces the single Anthropic provider of decision 165.
+
 ## 165. The first slice: local only, plain files, three dependencies
 
 **Proposed** (20 November 2026, for the founder to try the first version that evening).
@@ -29,20 +47,24 @@
 
 *Cost:* one importer per foreign format, each partial: what a framework expresses in code (a custom graph, a callback) does not import. Agent Plugins 1.0 leaves agents, hooks and commands out of its portable core, so those parts stay per-client. Changes 14, 74 and 149.
 
-## 163. Agent first: the agent is free, the gate decides at the action
+## 163. Agent first: a team per workspace, a lead who dispatches, routines, and the gate at the action
 
-**Proposed** (founder, 20 November 2026: "I want something as fluid as OpenBot, Grok Bot, Hark Pro…; what we had before was too rigid").
+**Proposed** (founder, 20 November 2026: "I want something as fluid as OpenBot, Grok Bot, Hark Pro…; what we had before was too rigid"; then "in a workspace I see my team of agents I hired, I can make groups, I talk to a lead who dispatches to the right agents, or directly to the right one"; and "routines: proposed by the agent when I ask the same thing often, or created in an interface").
 
-- **One assistant the owner talks to,** in the app. It knows the workspaces; the owner names one, or it infers one and confirms. It hands work to agents inside a workspace, which only see that workspace.
-- **Agents work in a loop with tools** (MCP connectors, the web, files), with memory, in the background. They report when done or when blocked. Nothing to design first: no graph, no department, no role to declare.
-- **Proactive:** it watches what the owner connects (mail, X, calendar) and proposes cards.
-- **Recurring work is created by talking:** "every morning, propose three posts" becomes a scheduled task: an instruction, a schedule, the tools it may use.
-- **Control moves to the action.** Every tool call goes through the gate: it is classed read, reversible or commits. Reads and reversible actions run; what commits waits for the owner (decision 56), on the phone. Trust is earned per kind of action (decision 153).
-- **Crystallise what works.** A scheduled task that has run well for weeks can be frozen, on the owner's word, into a fixed recipe: faster, cheaper and predictable. Fluid first; rigid only where it has proved itself.
+- **A workspace is a team.** The owner hires agents into it: imported from a catalog (decision 164) or created by talking. Each has a role, skills, its accounts, its engine (decision 166) and the autonomy it has earned.
+- **Groups** are teams within the team ("Content", "Accounting", "Travel").
+- **One lead per workspace,** the one the owner talks to by default. It dispatches work to the most relevant agents. The owner can also talk directly to any agent or group. The lead is v0's interlocutor (decision 120) back; it may suggest hiring (136), speak up once a day with an idea (119), and plan the day (137).
+- **The same conversation everywhere.** The Mac client and the phone do the same thing: talk, wait for an answer or an execution, get notified when work is done, when a question comes up, or when an approval is needed.
+- **Everything is an agent's skill, nothing is a separate mode:** writing, coding (on a branch, with a pull request), browsing a site, filling a form, booking.
+- **Agents work in a loop with tools,** in the background, with memory. Nothing to design first.
+- **Routines are first class.** Recurring work given to an agent or a group: a trigger (a schedule, an event such as a mail, a date approaching in the calendar, a new deadline, or by hand), an instruction in plain words, who does it, what it may use, how it reports. A routine is born three ways: by talking; **proposed by an agent** that notices the owner asks the same thing often, created only if the owner accepts; or **in the interface**, a Routines page per workspace to create, edit, pause and run.
+- **Control moves to the action.** Every tool call goes through the gate: read, reversible or commits. Reads and reversible actions run; what commits waits for the owner (decision 56). A bundle of actions can be approved at once when its card lists every action and the total ("Book it all"). Trust is earned per kind of action (decision 153).
+- **Crystallise what works.** A routine that has run well for weeks can be frozen, on the owner's word, into a fixed recipe: faster, cheaper, predictable. Fluid first; rigid only where it has proved itself.
+- **It improves itself, visibly:** from the owner's corrections (116), by proposing routines, skills, hires and recipes, and through the a30m workspace's pull requests on its own code (162). It never changes the gate on its own.
 
-*Why:* v0 put safety in the shape of the work (six-block graphs, a mandatory approval block, AI blocks without tools, roles and departments). Every new job needed a workflow designed first. Putting the control at the action keeps decision 56 and lets everything else flow.
+*Why:* v0 put safety in the shape of the work (six-block graphs, a mandatory approval block, AI blocks without tools, a business config to write). Every new job needed a workflow designed first. Putting the control at the action keeps decision 56 and lets everything else flow; the team, the lead and routines give the owner the structure that helps without the structure that blocks.
 
-*Cost:* an agent loop spends more tokens and time than a fixed recipe, and its results vary more: v0's pick went from 9 minutes to 37 seconds through structure. Crystallising answers that for what repeats. The gate becomes the one safeguard, so its classing of each tool must be right: an MCP tool with no declared class is treated as committing. Changes 26, 36, 43, 49, 58, 60 and 79.
+*Cost:* an agent loop spends more tokens and time than a fixed recipe, and its results vary more: v0's pick went from 9 minutes to 37 seconds through structure. Crystallising answers that for what repeats. The gate becomes the one safeguard, so its classing of each tool must be right: an MCP tool with no declared class is treated as committing. Changes 26, 43, 49, 58, 60 and 79; brings back 36, 119, 120, 136 and 137.
 
 ## 162. a30m works on a30m, in a workspace of its own, and is the first pilot
 
@@ -90,16 +112,17 @@
 - **New repository** `tomonchain/a30m`. The old one is tagged `v0-final` and archived. Nothing is deleted, no history is rewritten.
 - **We start again on the code, not on what was learned.** v0's decisions are reviewed one by one in `legacy.md`; the security scenarios become `docs/security/scenarios.md`; the design system is copied. No code is copied.
 - **Milestone 7 (agent mail) is paused.**
-- **Six phases**, each delivered with its interface, each closed by a gate:
+- **Seven phases**, each delivered with its interface, each closed by a gate:
 
 | Phase | Delivers | Gate |
 | --- | --- | --- |
 | 0. Foundations | Repository, license, CLA, CI, secret scanning, decisions carried over. No product code. | The founder approves the repository. |
-| 1. Server alone | The agent runtime in Rust on a VPS, the owner account, device keys, a30m's own workspace (decision 162), then Hedgen's. | a30m's workspace runs its tasks a week without incident. |
-| 2. Mac client | Install over SSH, pairing by QR code, the HQ. | A fresh install in under 10 minutes. |
-| 3. Mobile app | HQ, Needs you, approvals, push relay. | Telegram turned off. |
-| 4. Personal workspace | The founder's mail and calendar, read-only. | No leak between workspaces in the tests. |
+| 1. The team and the lead | The agent runtime on a VPS, the owner account, device keys; hired agents, groups, the lead, conversations, routines (decision 163); a30m's own workspace first (162), then Hedgen's. | a30m's workspace runs a week without incident. |
+| 2. Mac client and engines | Install over SSH, pairing by QR code; Codex and Claude Code engines (166). | A fresh install in under 10 minutes. |
+| 3. The phone | Talking to agents, notifications, approval cards, push relay. | Telegram turned off. |
+| 4. Personal life | Calendar and mail, read-only first: birthdays, deadlines, reminders. | No leak between workspaces in the tests. |
 | 5. Partner host | A server created from the client, a subscription, the brand. | The first outside user. |
+| 6. Acting in the world | A browser agents drive, bookings, payments under a decision of their own. | The first booking approved and made. |
 
 - Anything outside this list goes to the roadmap's inbox. Waiting there already: a30m for companies (SSO, delegated rights, Bedrock), opt-in telemetry (signals, not content).
 
