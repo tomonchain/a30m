@@ -10,9 +10,6 @@
 *.p12
 secrets.env
 
-# Private business data: lives in its own private repository
-hedgen-business/
-
 # A copy of a real home, used to test a development build
 .airth/
 airth-home*/

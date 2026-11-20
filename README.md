@@ -19,6 +19,6 @@ What it will be, and in what order, is written in [`docs/decisions/`](docs/decis
 
 ## License
 
-[GNU AGPL-3.0](LICENSE). Copyright 2026 Thomas Bazire. Contributions need the [CLA](CLA.md). See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
+[GNU AGPL-3.0](LICENSE). Copyright holder in [NOTICE](NOTICE). Contributions need the [CLA](CLA.md). See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
 
 Airth v0 is archived at [tomonchain/airth](https://github.com/tomonchain/airth) (tag `v0-final`).
