@@ -31,7 +31,7 @@
 
 - **Owner:** Thomas Bazire, personally. Not Hedgen Ltd: Hedgen is a user of Airth, not its owner.
 - **A company of its own** takes the code over by assignment at phase 5 (first paid subscription) or at a fundraising, whichever comes first. Where it is incorporated is an accountant's question.
-- **License:** GNU AGPL-3.0 (`AGPL-3.0-only`). Anyone hosting a30m as a service must publish their changes, which protects the hosted offer.
+- **License:** GNU AGPL-3.0 (`AGPL-3.0-only`). Anyone who runs a modified a30m for users over a network must offer those users the source of their version (section 13), which protects the hosted offer.
 - **CLA:** contributors keep their copyright and grant the right to relicense. Organisations that ban the AGPL can buy a commercial license (dual licensing). The CLA is reviewed by a lawyer before the first outside contribution.
 - **Chosen once, before the first outside contributor, and never changed quietly.**
 
@@ -69,10 +69,10 @@
 
 - **Port 443.** Many networks block other ports.
 - **A self-signed certificate, pinned.** The pairing QR code carries its fingerprint, so no domain name is needed and a man in the middle is refused.
-- **Device keys only.** The server answers nothing to a device that is not paired. A device's key is made in its secure enclave and never leaves it.
+- **Device keys only.** The server answers nothing to a device that is not paired, with one exception: the registration request that carries a valid one-time pairing token. Anything else from an unpaired device is refused. A device's key is made in its secure hardware (the Secure Enclave on iOS, the Android Keystore) and never leaves it.
 - **Pairing:** the Mac client shows a QR code (server address, certificate fingerprint, a one-time token valid 2 minutes). The phone makes its key pair and registers; the Mac shows the device and asks the owner to confirm. A new device is added only from a device already paired.
 - **Recovery:** the client shows a recovery key at install, to keep offline. It alone can take the server back.
-- **Push:** iOS notifications go through Apple with the publisher's key, so a self-hosted server cannot send them alone. A small relay run by the publisher passes a signal ("something waits for you"), never content.
+- **Push:** phone notifications go through Apple's push service (iOS) or Firebase Cloud Messaging (Android), with the publisher's credentials, so a self-hosted server cannot send them alone. A small relay run by the publisher passes a signal ("something waits for you"), never content. Phase 3 ships iOS; Android follows the same path.
 
 *Why:* the founder wants no domain to configure and no third-party network to install (v0 used Tailscale, decision 37). Pinning gives TLS's protection without a certificate authority.
 

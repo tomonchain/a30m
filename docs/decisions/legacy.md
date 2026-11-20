@@ -8,7 +8,7 @@ Kept: 103 · Superseded: 30 · Revisit: 21.
 - **Superseded:** replaced by a decision from 155 on, or already by a later v0 decision.
 - **Revisit:** decided again when the phase that needs it starts.
 
-The full texts are in [v0's decisions](https://github.com/tomonchain/airth/blob/v0-final/docs/decisions.md).
+The full texts are in [v0's decisions](https://github.com/tomonchain/airth/blob/v0-final/docs/decisions.md). v0 has no decision 35, and two numbered 15 (15a and 15b).
 
 | No. | v0 decision | Status | Why |
 | --- | --- | --- | --- |
@@ -21,7 +21,7 @@ The full texts are in [v0's decisions](https://github.com/tomonchain/airth/blob/
 | 148 | Each message of a run keeps the time it was added; the model never sees it | Kept | Each message keeps its time; the model never sees it. |
 | 147 | One thread per project; the Home keeps what belongs to none | Kept | One thread per project. |
 | 146 | An agent links a workspace file, and the founder opens it in the app | Kept | An agent links a workspace file. |
-| 145 | An update is ready sooner: a faster build, tests only when the Rust changed, a look every 5 minutes | Superseded | The update path changes with signed releases (155). |
+| 145 | An update is ready sooner: a faster build, tests only when the Rust changed, a look every 5 minutes | Superseded | The Mac client installs and updates the server; the update path is decided at phase 2 (155). |
 | 144 | An agent's words are rendered as Markdown, by one component, as untrusted content | Kept | Agent text rendered as untrusted Markdown. |
 | 143 | The interface's deterministic logic is tested with Vitest | Kept | Vitest for the interface's logic. |
 | 142 | An agent may name the model its tasks use | Kept | An agent may name the model its tasks use. |
@@ -57,7 +57,7 @@ The full texts are in [v0's decisions](https://github.com/tomonchain/airth/blob/
 | 112 | Airth.app opens this Mac's Airth or a server's | Superseded | The client always opens a server (155, 157). |
 | 111 | The founder is told when a model provider's money runs low | Kept | The owner is told when a provider's money runs low. |
 | 110 | Airth stays fast and its disk bounded as the businesses' history grows | Kept | Parsing once, indexes, bounded disk. |
-| 109 | The founder talks to the agents on Telegram, as to a colleague | Superseded | Talking to agents moves to the mobile app (phase 3). |
+| 109 | The founder talks to the agents on Telegram, as to a colleague | Superseded | Talking to agents moves to the mobile app at phase 3 (155, 159). |
 | 108 | The service keeps running on its own: its loops survive a panic, and one business's error stops only that business | Kept | Loops survive a panic; one space's error stops only that space. |
 | 107 | The rail shows what each model provider costs, and how long its money lasts | Kept | Provider costs and how long their money lasts. |
 | 106 | Airth moves to the founder's VPS now, without waiting for milestone 6's proof | Superseded | The server is the default (155). |
@@ -66,7 +66,7 @@ The full texts are in [v0's decisions](https://github.com/tomonchain/airth/blob/
 | 103 | Airth calls an MCP tool the founder approved, once | Kept | An approved MCP tool is called once. |
 | 102 | An incident closes itself when its action works again | Kept | An incident closes itself when its action works again. |
 | 101 | The first launch sets up a business in four questions, beside the business it builds | Revisit | Onboarding moves into the Mac client, at phase 2. |
-| 100 | The founder's Airth follows main, and a pull request is tried on a copy | Superseded | The server runs signed releases installed by the client (155). |
+| 100 | The founder's Airth follows main, and a pull request is tried on a copy | Superseded | The Mac client installs and updates the server; how releases are cut is decided at phase 2 (155). |
 | 99 | An AI block remembers the stories it kept, for a few days | Kept | An AI block remembers what it kept, for a few days. |
 | 98 | A new key unpairs every phone, and is made on the Mac only | Revisit | The owner key and the recovery key, inside 158. |
 | 97 | Airth fits a phone, and a paired phone keeps the key | Superseded | Device keys from QR pairing (158). |
@@ -114,7 +114,7 @@ The full texts are in [v0's decisions](https://github.com/tomonchain/airth/blob/
 | 55 | A failed action is retried only when a retry cannot do it twice | Kept | A failed action is retried only when it cannot run twice. |
 | 54 | One bank in the beta, read-only: Revolut Business | Revisit | A bank for pro spaces, after phase 4. |
 | 53 | The HQ shows one section per business: health, vitals, finance, latest activity | Kept | The HQ shows one section per space, personal included (155). |
-| 52 | One Telegram bot for the founder, held by Airth, never by a business | Superseded | The mobile app replaces it at phase 3; Telegram stays until then. |
+| 52 | One Telegram bot for the founder, held by Airth, never by a business | Superseded | The mobile app replaces it at phase 3 (159); Telegram stays until then. |
 | 51 | A routine's commands run offline; its network goes through declared actions | Kept | Routine commands run offline; network only through declared actions. |
 | 50 | In the owner's home, commands read only the realm and the developer tools | Kept | Commands read only the space and the developer tools. |
 | 49 | Routines are JSON graphs of the six blocks; connectors declare their actions in the Airth home | Kept | Routines are graphs of the six blocks; connectors declare actions. |
@@ -137,11 +137,11 @@ The full texts are in [v0's decisions](https://github.com/tomonchain/airth/blob/
 | 31 | Business state lives in SQLite, one database per realm | Kept | One SQLite database per space, in the server's home (155). |
 | 30 | Business pipelines are a generic engine; each business declares its own | Superseded | Already replaced by the six-block graphs (49). |
 | 29 | Airth runs on the owner's Mac until a stable beta, then on a Linux VPS | Superseded | The server is the default from day one (155). |
-| 28 | The approval queue reaches the owner's phone through a Telegram bot | Superseded | The mobile app replaces the Telegram bot at phase 3 (155). |
+| 28 | The approval queue reaches the owner's phone through a Telegram bot | Superseded | The mobile app replaces the Telegram bot at phase 3 (155, 159). |
 | 27 | The owner's time is a recorded quantity | Kept | The owner's time stays a recorded quantity. |
 | 26 | Business operations are pipelines of tested steps; the model only judges | Kept | Operations are tested steps; the model only judges. |
 | 25 | The surface is frozen until the Hedgen pilot proves itself | Superseded | The surface is now set by the phases (159). |
-| 24 | Benchmarks drive real runs through the hub, in throwaway realms, and verify outcomes themselves | Superseded | Replaced by the security scenarios harness (67). |
+| 24 | Benchmarks drive real runs through the hub, in throwaway realms, and verify outcomes themselves | Superseded | Replaced by the security scenarios (67), now specs in docs/security (159). |
 | 23 | Requests are shaped for the provider's prompt cache | Kept | Requests shaped for the prompt cache. |
 | 22 | The app serves each request on its own thread; settings changes stay serialized | Revisit | Threading model re-decided with decision 1, at phase 1. |
 | 21 | The owner picks the model per request; each provider only gets its own key | Kept | The owner picks the model; each provider gets only its key. |
@@ -151,7 +151,7 @@ The full texts are in [v0's decisions](https://github.com/tomonchain/airth/blob/
 | 17 | Several model connections routed by the ask, and one North Star per realm | Revisit | Model routing stays; the North Star becomes each space's goal. |
 | 16 | A native Mac app, and Mac apps as fixed, approved actions | Superseded | The Mac app becomes the Tauri client (157). |
 | 15b | A second provider speaks the OpenAI-compatible Chat Completions format | Kept | OpenAI-compatible providers stay supported. |
-| 15a | Airth updates itself from its source repository, only after its tests pass | Superseded | The Mac client installs signed releases on the server (155). |
+| 15a | Airth updates itself from its source repository, only after its tests pass | Superseded | The Mac client installs and updates the server (155). |
 | 14 | Skills are tested programs the owner installs, not changes to Airth itself | Superseded | Skills follow the Agent Skills format (149). |
 | 13 | The app server is the background runtime | Kept | The background runtime is now the remote server (155). |
 | 12 | Notifications and summaries go to an inbox | Superseded | The inbox became Needs you (59, 131). |
