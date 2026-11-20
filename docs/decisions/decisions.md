@@ -1,5 +1,20 @@
 # Decisions
 
+## 165. The first slice: local only, plain files, three dependencies
+
+**Proposed** (20 November 2026, for the founder to try the first version that evening).
+
+- **127.0.0.1 only**, with a token printed at start and checked on every API call, the Host header checked, and JSON-only writes. Reached from elsewhere through an SSH tunnel. Device pairing and the pinned certificate (158) come before it listens on a network.
+- **Plain JSON files** in the server's home, one folder per workspace: its conversation, its agent (`agent/`: AGENTS.md, skills, mcp.json) and the agents' folder (`files/`). Agents' file tools reach `files/` only, so an agent cannot rewrite its instructions or add an MCP server. A database comes with the decision that needs it.
+- **Dependencies:** `serde` and `serde_json` (JSON everywhere), `tiny_http` (a blocking HTTP server, as v0, enough on loopback), `ureq` (a blocking HTTPS client for the model provider). Blocking threads, as decision 1; the server's face on a public port is decided with 158.
+- **One provider, Anthropic,** with the key from the server's environment. An `echo` model tries the interface without a key.
+- **MCP over stdio only, not sandboxed yet.** The servers run with the owner's rights: connect only servers you trust. Bubblewrap around them comes with the scenarios (159).
+- **What waits for the owner is kept in memory:** a restart drops it, and the agent's turn with it.
+
+*Why:* the founder wanted to try a first version the same evening. Each choice is the smallest that holds the rules that matter (the gate, the folder boundary, the token), and each is named so it is replaced deliberately.
+
+*Cost:* no phone, no pairing, no sandbox, no persistence of approvals, no scheduled tasks yet. The slice is larger than the 400-line rule (about 2,000 lines of code and tests), because it is the first whole path.
+
 ## 164. Agents, skills and connectors in open formats, imported from catalogs
 
 **Proposed** (founder, 20 November 2026: "I want to import agents from the known libraries, no proprietary agent format; connectors the same; a catalog can be imported").
