@@ -26,6 +26,9 @@ jobs:
           curl -sSfL -o gitleaks.tar.gz \
             "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
           tar -xzf gitleaks.tar.gz gitleaks
+          # Gitleaks' own default rules, never a config or an ignore file
+          # a pull request could bring to silence it.
+          rm -f .gitleaks.toml .gitleaksignore
           ./gitleaks git --redact --verbose --exit-code 1 .
 
       # The Rust steps run once the workspace exists.

@@ -14,20 +14,31 @@ permissions:
   contents: write
   pull-requests: write
 
+# One run at a time per pull request, the newest winning, so an older run
+# cannot turn auto-merge back on after a newer one labelled it.
+concurrency:
+  group: automerge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   automerge:
     runs-on: ubuntu-24.04
-    # Only branches of this repository; a fork's pull request is reviewed.
-    if: github.event.pull_request.head.repo.full_name == github.repository && !github.event.pull_request.draft
+    # Only the founder's own pull requests, from branches of this
+    # repository. Anyone else's pull request is reviewed.
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login == 'tomonchain' &&
+      !github.event.pull_request.draft
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       REPO: ${{ github.repository }}
       PR: ${{ github.event.pull_request.number }}
     steps:
       - name: Label what touches a boundary
-        # Paths in CODEOWNERS are security boundaries or the project's rules.
-        # A pull request that changes one is labelled `security`, whatever
-        # its author said.
+        # The paths `.github/CODEOWNERS` lists: security boundaries and the
+        # project's rules. A pull request that changes one is labelled
+        # `security`, whatever its author said. Keep both lists in step.
+        # The `security` and `decision` labels exist in the repository.
         run: |
           files=$(gh pr diff "$PR" --repo "$REPO" --name-only)
           if echo "$files" | grep -Eq '^(crates/proto/|\.github/|docs/security/|LICENSE$|NOTICE$|CLA\.md$)'; then
@@ -36,9 +47,13 @@ jobs:
 
       - name: Turn auto-merge on or off
         run: |
+          # Read again here, after the step above may have labelled it.
           labels=$(gh pr view "$PR" --repo "$REPO" --json labels --jq '.labels[].name')
           if echo "$labels" | grep -Eqx 'security|decision'; then
-            gh pr merge "$PR" --repo "$REPO" --disable-auto || true
+            auto=$(gh pr view "$PR" --repo "$REPO" --json autoMergeRequest --jq '.autoMergeRequest != null')
+            if [ "$auto" = "true" ]; then
+              gh pr merge "$PR" --repo "$REPO" --disable-auto
+            fi
             echo "Waits for the founder: labelled security or decision."
           else
             gh pr merge "$PR" --repo "$REPO" --auto --squash
