@@ -162,7 +162,7 @@ pub fn start_turn(app: &Arc<App>, slug: &str, text: &str) -> Result<(), String> 
         }
     }
     let mut messages = ws.conversation();
-    messages.push(Message::user_text(text));
+    messages.push(next_message(&messages, text));
     if let Err(e) = ws.save_conversation(&messages) {
         app.running.lock().map(|mut r| r.remove(slug)).ok();
         return Err(e);
@@ -184,6 +184,34 @@ pub fn start_turn(app: &Arc<App>, slug: &str, text: &str) -> Result<(), String> 
         }
     });
     Ok(())
+}
+
+/// The owner's message. When the last turn stopped between a tool call
+/// and its result (a restart while an action waited for the owner), the
+/// calls are closed first, or the provider would refuse the conversation.
+fn next_message(messages: &[Message], text: &str) -> Message {
+    let mut content = Vec::new();
+    if let Some(last) = messages.last()
+        && last.role == a30m_core::Role::Assistant
+    {
+        for block in &last.content {
+            if let Block::ToolUse { id, .. } = block {
+                content.push(Block::ToolResult {
+                    tool_use_id: id.clone(),
+                    content: "Interrupted: the server stopped before this ran. It did not run."
+                        .into(),
+                    is_error: true,
+                });
+            }
+        }
+    }
+    content.push(Block::Text {
+        text: text.to_string(),
+    });
+    Message {
+        role: a30m_core::Role::User,
+        content,
+    }
 }
 
 fn turn(app: &Arc<App>, ws: &Workspace, messages: &mut Vec<Message>) -> Result<(), String> {
@@ -220,4 +248,32 @@ fn turn(app: &Arc<App>, ws: &Workspace, messages: &mut Vec<Message>) -> Result<(
         let _ = ws.save_conversation(messages);
     }
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn a_call_left_open_by_a_restart_is_closed_before_the_next_message() {
+        let messages = vec![
+            Message::user_text("publish it"),
+            Message {
+                role: a30m_core::Role::Assistant,
+                content: vec![Block::ToolUse {
+                    id: "t1".into(),
+                    name: "mcp__x__post".into(),
+                    input: json!({}),
+                }],
+            },
+        ];
+        let next = next_message(&messages, "still there?");
+        assert!(
+            matches!(&next.content[0], Block::ToolResult { tool_use_id, is_error: true, .. } if tool_use_id == "t1")
+        );
+        assert!(matches!(&next.content[1], Block::Text { text } if text == "still there?"));
+        let plain = next_message(&[Message::user_text("a")], "b");
+        assert_eq!(plain.content.len(), 1);
+    }
 }
