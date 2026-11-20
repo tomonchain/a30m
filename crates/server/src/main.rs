@@ -5,6 +5,7 @@
 mod approvals;
 mod http;
 mod tools;
+mod web;
 
 use a30m_core::{Block, Message, Run};
 use a30m_store::{Home, Workspace};
