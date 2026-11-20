@@ -4,6 +4,7 @@
 //! <home>/workspaces/<slug>/
 //!   workspace.json      name, the owner's tool classes      (server only)
 //!   conversation.json   the conversation                     (server only)
+//!   conversations/      earlier conversations, by start time (server only)
 //!   agent/              the imported agent: AGENTS.md,       (server only)
 //!                       plugin.json, mcp.json, skills/
 //!   files/              the agents' folder: the only place their tools read and write
@@ -184,6 +185,24 @@ impl Workspace {
     pub fn save_conversation(&self, messages: &[Message]) -> Result<(), String> {
         let bytes = serde_json::to_vec(messages).map_err(|e| e.to_string())?;
         write_atomic(&self.dir.join("conversation.json"), &bytes)
+    }
+
+    /// Starts a new conversation. The current one is kept in
+    /// `conversations/`, never deleted.
+    pub fn new_conversation(&self) -> Result<(), String> {
+        let current = self.dir.join("conversation.json");
+        if !current.exists() || self.conversation().is_empty() {
+            return Ok(());
+        }
+        let archive = self.dir.join("conversations");
+        std::fs::create_dir_all(&archive).map_err(|e| e.to_string())?;
+        let mut name = archive.join(format!("{}.json", now()));
+        let mut n = 1;
+        while name.exists() {
+            name = archive.join(format!("{}-{n}.json", now()));
+            n += 1;
+        }
+        std::fs::rename(&current, &name).map_err(|e| e.to_string())
     }
 
     pub fn agents_md(&self) -> String {
@@ -421,6 +440,24 @@ mod tests {
         assert_eq!(ws.skills()[0].description, "Write release notes");
         assert!(ws.skill_text("release-notes").unwrap().contains("Steps."));
         assert_eq!(ws.mcp_servers().unwrap()["files"].command, "npx");
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn a_new_conversation_keeps_the_old_one() {
+        let dir = temp("conv");
+        let home = Home::open(&dir).unwrap();
+        let ws = home.create("a").unwrap();
+        ws.new_conversation().unwrap();
+        ws.save_conversation(&[Message::user_text("one")]).unwrap();
+        ws.new_conversation().unwrap();
+        assert!(ws.conversation().is_empty());
+        ws.save_conversation(&[Message::user_text("two")]).unwrap();
+        ws.new_conversation().unwrap();
+        let kept = std::fs::read_dir(ws.dir.join("conversations"))
+            .unwrap()
+            .count();
+        assert_eq!(kept, 2);
         std::fs::remove_dir_all(dir).unwrap();
     }
 

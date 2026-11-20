@@ -277,6 +277,25 @@ fn route(app: &Arc<App>, method: &Method, parts: &[&str], body: &Value) -> Answe
             ws.save_info().map_err(|e| (500, e))?;
             Ok(json!({"model": crate::model_of(app, &ws)}))
         }
+        (Method::Post, ["workspaces", slug, "conversation", "new"]) => {
+            let ws = app.home.workspace(slug).map_err(|e| (404, e))?;
+            // Holding the running mark keeps a turn from starting meanwhile.
+            {
+                let mut running = app.running.lock().map_err(|_| (500, "busy".to_string()))?;
+                if !running.insert(slug.to_string()) {
+                    return Err((409, "wait until the agent has finished".into()));
+                }
+            }
+            let done = ws.new_conversation();
+            if let Ok(mut running) = app.running.lock() {
+                running.remove(*slug);
+            }
+            done.map_err(|e| (500, e))?;
+            if let Ok(mut errors) = app.errors.lock() {
+                errors.remove(*slug);
+            }
+            Ok(json!({"ok": true}))
+        }
         (Method::Get, ["approvals"]) => Ok(json!({"waiting": app.approvals.pending(None)})),
         (Method::Post, ["approvals", id]) => {
             let id: u64 = id.parse().map_err(|_| bad("bad id"))?;
