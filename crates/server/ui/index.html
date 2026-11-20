@@ -102,7 +102,7 @@ function shell() {
   const main = document.getElementById('main');
   if (document.getElementById('feed')) return;
   main.innerHTML = `
-  <header><h2 id="title"></h2><span class="status" id="status"></span><span class="grow"></span><button id="agentBtn">Agent</button></header>
+  <header><h2 id="title"></h2><span class="status" id="status"></span><span class="grow"></span><button id="newConv" title="Start a new conversation; this one is kept on the server">New conversation</button><button id="agentBtn">Agent</button></header>
   <section id="agent">
     <div><b>Model</b> <span class="mono" id="model"></span> <span class="muted" id="providers"></span></div>
     <div class="row"><input id="modelSpec" list="modelHints" placeholder="provider/model, e.g. openai/gpt-6.1-sol · empty for the server's default"><datalist id="modelHints"><option value="anthropic/claude-sonnet-5-5"><option value="anthropic/claude-opus-5-5"><option value="openai/gpt-6.1-sol"><option value="xai/grok-4.7"><option value="gemini/gemini-pro-latest"><option value="gemini/gemini-flash-latest"><option value="ollama/llama3.3"><option value="echo"></datalist><button id="modelBtn">Use</button></div>
@@ -114,6 +114,10 @@ function shell() {
   </section>
   <div id="feed"><div class="wrap" id="wrap"></div></div>
   <form id="composer"><div class="wrap"><textarea id="text" rows="2" placeholder="Ask a30m…"></textarea><button class="primary" id="send">Send</button></div></form>`;
+  document.getElementById('newConv').onclick = async () => {
+    if (!confirm('Start a new conversation? This one is kept on the server, but the agent will no longer see it.')) return;
+    try { await api(`workspaces/${current}/conversation/new`, {}); loadWs(); } catch (err) { alertIn(err.message); }
+  };
   document.getElementById('agentBtn').onclick = () => document.getElementById('agent').classList.toggle('open');
   document.getElementById('composer').onsubmit = async e => {
     e.preventDefault();
@@ -147,6 +151,7 @@ function render() {
   document.getElementById('title').textContent = s.workspace.name;
   document.getElementById('status').textContent = s.waiting.length ? 'Waiting for you' : s.running ? 'Working…' : '';
   document.getElementById('send').disabled = s.running;
+  document.getElementById('newConv').disabled = s.running || !s.messages.length;
   document.getElementById('model').textContent = s.model + (s.workspace.model ? '' : ' (default)');
   document.getElementById('skills').innerHTML = s.skills.length ? s.skills.map(k => `<span class="chip" title="${esc(k.description)}">${esc(k.name)}</span>`).join('') : '<span class="muted">none</span>';
   const run = s.mcp.running.map(m => `<span class="chip">${esc(m.name)} · ${m.tools} tools</span>`).join('');
