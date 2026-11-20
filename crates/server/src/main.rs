@@ -6,7 +6,7 @@ mod approvals;
 mod http;
 mod tools;
 
-use a30m_core::{Block, Message, Model, Run};
+use a30m_core::{Block, Message, Run};
 use a30m_store::{Home, Workspace};
 use approvals::Approvals;
 use std::collections::{BTreeMap, HashSet};
@@ -17,8 +17,8 @@ use tools::WorkspaceTools;
 pub struct App {
     pub home: Home,
     pub token: String,
-    pub model: Box<dyn Model>,
-    pub model_name: String,
+    /// The model a workspace uses when it has not chosen one.
+    pub default_model: String,
     pub approvals: Approvals,
     /// Workspaces whose agent is working now.
     pub running: Mutex<HashSet<String>>,
@@ -28,21 +28,26 @@ pub struct App {
     pub errors: Mutex<BTreeMap<String, String>>,
 }
 
-const USAGE: &str =
-    "usage: a30m-server --home <folder> [--port 7330] [--model claude-sonnet-5-5 | echo]
+const USAGE: &str = "usage: a30m-server --home <folder> [--port 7330] [--model provider/model]
 
   --home   where a30m keeps its workspaces. Use a folder of its own;
            never Airth v0's home (~/.airth).
   --port   port on 127.0.0.1 (default 7330)
-  --model  Anthropic model id (default claude-sonnet-5-5), or `echo`
-           to try the interface without a key
+  --model  the default model (anthropic/claude-sonnet-5-5); a workspace
+           can choose its own. `echo` tries the interface without a key.
 
-The Anthropic key is read from ANTHROPIC_API_KEY.";
+Providers and their keys, read from the environment:
+  anthropic  ANTHROPIC_API_KEY     anthropic/claude-sonnet-5-5
+  openai     OPENAI_API_KEY        openai/gpt-6.1-sol
+  xai        XAI_API_KEY           xai/grok-4.7
+  gemini     GEMINI_API_KEY        gemini/gemini-pro-latest
+  ollama     (none, local)         ollama/llama3.3";
 
 fn main() {
     let mut home: Option<PathBuf> = None;
     let mut port: u16 = 7330;
-    let mut model_name = std::env::var("A30M_MODEL").unwrap_or_else(|_| "claude-sonnet-5-5".into());
+    let mut model_name =
+        std::env::var("A30M_MODEL").unwrap_or_else(|_| "anthropic/claude-sonnet-5-5".into());
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         match arg.as_str() {
@@ -88,22 +93,11 @@ fn main() {
             std::process::exit(1);
         }
     };
-    let model: Box<dyn Model> = if model_name == "echo" {
-        Box::new(a30m_models::Echo)
-    } else {
-        match std::env::var("ANTHROPIC_API_KEY") {
-            Ok(key) if !key.trim().is_empty() => Box::new(a30m_models::Anthropic::new(
-                key.trim().to_string(),
-                model_name.clone(),
-            )),
-            _ => {
-                eprintln!(
-                    "a30m-server: ANTHROPIC_API_KEY is not set. Set it, or start with --model echo."
-                );
-                std::process::exit(2);
-            }
-        }
-    };
+    // A model without its key is not fatal: the owner sees why in the
+    // workspace, and can pick another.
+    if let Err(e) = a30m_models::connect(&model_name) {
+        eprintln!("a30m-server: default model {model_name}: {e}");
+    }
     let token = match http::random_token() {
         Ok(t) => t,
         Err(e) => {
@@ -114,8 +108,7 @@ fn main() {
     let app = Arc::new(App {
         home,
         token,
-        model,
-        model_name,
+        default_model: model_name,
         approvals: Approvals::default(),
         running: Mutex::new(HashSet::new()),
         mcp: Mutex::new(BTreeMap::new()),
@@ -152,9 +145,17 @@ pub fn system_prompt(ws: &Workspace) -> String {
     s
 }
 
+/// The workspace's model, or the server's default.
+pub fn model_of<'a>(app: &'a App, ws: &'a Workspace) -> &'a str {
+    ws.info.model.as_deref().unwrap_or(&app.default_model)
+}
+
 /// Adds the owner's message and runs the agent in the background.
 pub fn start_turn(app: &Arc<App>, slug: &str, text: &str) -> Result<(), String> {
     let ws = app.home.workspace(slug)?;
+    // Checked before the message is kept, so a missing key is said at once
+    // and the conversation is not left waiting for an answer.
+    a30m_models::connect(model_of(app, &ws))?;
     {
         let mut running = app.running.lock().map_err(|_| "busy")?;
         if !running.insert(slug.to_string()) {
@@ -221,9 +222,10 @@ fn turn(app: &Arc<App>, ws: &Workspace, messages: &mut Vec<Message>) -> Result<(
         approvals: &app.approvals,
         workspace: ws.info.slug.clone(),
     };
+    let model = a30m_models::connect(model_of(app, ws))?;
     let system = system_prompt(ws);
     let run = Run {
-        model: app.model.as_ref(),
+        model: model.as_ref(),
         tools: &tools,
         approver: &approver,
         system: &system,
@@ -265,6 +267,7 @@ mod tests {
                     id: "t1".into(),
                     name: "mcp__x__post".into(),
                     input: json!({}),
+                    extra: None,
                 }],
             },
         ];

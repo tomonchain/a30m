@@ -35,6 +35,10 @@ pub struct WorkspaceInfo {
     /// or commits. Wins over what the tool's server says (decision 163).
     #[serde(default)]
     pub tool_classes: BTreeMap<String, String>,
+    /// The workspace's model, `provider/model`; the server's default when
+    /// unset (decision 166).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -132,6 +136,7 @@ impl Home {
             name: name.to_string(),
             created: now(),
             tool_classes: BTreeMap::new(),
+            model: None,
         };
         let ws = Workspace { dir, info };
         ws.save_info()?;

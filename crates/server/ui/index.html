@@ -104,7 +104,9 @@ function shell() {
   main.innerHTML = `
   <header><h2 id="title"></h2><span class="status" id="status"></span><span class="grow"></span><button id="agentBtn">Agent</button></header>
   <section id="agent">
-    <div><b>Skills</b> <span id="skills"></span></div>
+    <div><b>Model</b> <span class="mono" id="model"></span> <span class="muted" id="providers"></span></div>
+    <div class="row"><input id="modelSpec" list="modelHints" placeholder="provider/model, e.g. openai/gpt-6.1-sol · empty for the server's default"><datalist id="modelHints"><option value="anthropic/claude-sonnet-5-5"><option value="anthropic/claude-opus-5-5"><option value="openai/gpt-6.1-sol"><option value="xai/grok-4.7"><option value="gemini/gemini-pro-latest"><option value="gemini/gemini-flash-latest"><option value="ollama/llama3.3"><option value="echo"></datalist><button id="modelBtn">Use</button></div>
+    <div style="margin-top:10px"><b>Skills</b> <span id="skills"></span></div>
     <div style="margin-top:6px"><b>MCP servers</b> <span id="mcp"></span></div>
     <div class="row"><input id="importPath" placeholder="Folder of an Agent Plugin or a skill, on the server's machine"><button id="importBtn">Import</button></div>
     <div class="row"><input id="clsTool" placeholder="Tool name, e.g. mcp__github__create_issue"><select id="clsVal"><option value="read">read</option><option value="reversible">reversible</option><option value="commits">commits</option><option value="default">default</option></select><button id="clsBtn">Set class</button></div>
@@ -126,6 +128,11 @@ function shell() {
     try { const r = await api(`workspaces/${current}/import`, {path}); agentMsg('Imported: ' + r.imported.join(', ') + '. Servers start with the next message.'); loadWs(); }
     catch (err) { agentMsg(err.message, true); }
   };
+  document.getElementById('modelBtn').onclick = async () => {
+    try { const r = await api(`workspaces/${current}/model`, {model: document.getElementById('modelSpec').value.trim()}); agentMsg('This workspace now uses ' + r.model + '.'); document.getElementById('modelSpec').value = ''; loadWs(); }
+    catch (err) { agentMsg(err.message, true); }
+  };
+  api('info').then(i => { document.getElementById('providers').textContent = '· keys set: ' + (i.providers.filter(p => p.ready).map(p => p.name).join(', ') || 'none'); }).catch(() => {});
   document.getElementById('clsBtn').onclick = async () => {
     const tool = document.getElementById('clsTool').value.trim(); if (!tool) return;
     try { await api(`workspaces/${current}/classes`, {tool, class: document.getElementById('clsVal').value}); agentMsg('Saved: ' + tool + ' is ' + document.getElementById('clsVal').value + '.'); loadWs(); }
@@ -140,6 +147,7 @@ function render() {
   document.getElementById('title').textContent = s.workspace.name;
   document.getElementById('status').textContent = s.waiting.length ? 'Waiting for you' : s.running ? 'Working…' : '';
   document.getElementById('send').disabled = s.running;
+  document.getElementById('model').textContent = s.model + (s.workspace.model ? '' : ' (default)');
   document.getElementById('skills').innerHTML = s.skills.length ? s.skills.map(k => `<span class="chip" title="${esc(k.description)}">${esc(k.name)}</span>`).join('') : '<span class="muted">none</span>';
   const run = s.mcp.running.map(m => `<span class="chip">${esc(m.name)} · ${m.tools} tools</span>`).join('');
   const decl = s.mcp.declared.filter(n => !s.mcp.running.some(m => m.name === n)).map(n => `<span class="chip">${esc(n)} · starts on next message</span>`).join('');

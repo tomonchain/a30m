@@ -41,7 +41,11 @@ pub fn serve(app: Arc<App>, port: u16) -> Result<(), String> {
         env!("CARGO_PKG_VERSION")
     );
     println!("home: {}", app.home.dir().display());
-    println!("model: {}", app.model_name);
+    println!("default model: {}", app.default_model);
+    println!(
+        "providers with a key: {}",
+        a30m_models::available().join(", ")
+    );
     println!();
     println!("Open: http://{address}/#t={}", app.token);
     for request in server.incoming_requests() {
@@ -155,7 +159,12 @@ fn route(app: &Arc<App>, method: &Method, parts: &[&str], body: &Value) -> Answe
     match (method, parts) {
         (Method::Get, ["info"]) => Ok(json!({
             "version": env!("CARGO_PKG_VERSION"),
-            "model": app.model_name,
+            "default_model": app.default_model,
+            "providers": a30m_models::PROVIDERS.iter().map(|p| json!({
+                "name": p.name,
+                "key": p.key_var,
+                "ready": a30m_models::available().contains(&p.name),
+            })).collect::<Vec<_>>(),
         })),
         (Method::Get, ["workspaces"]) => {
             let running = app.running.lock().map(|r| r.clone()).unwrap_or_default();
@@ -206,6 +215,7 @@ fn route(app: &Arc<App>, method: &Method, parts: &[&str], body: &Value) -> Answe
                 .unwrap_or_default();
             Ok(json!({
                 "workspace": ws.info,
+                "model": crate::model_of(app, &ws),
                 "messages": ws.conversation(),
                 "running": running,
                 "error": error,
@@ -252,6 +262,20 @@ fn route(app: &Arc<App>, method: &Method, parts: &[&str], body: &Value) -> Answe
             }
             ws.save_info().map_err(|e| (500, e))?;
             Ok(json!({"ok": true}))
+        }
+        (Method::Post, ["workspaces", slug, "model"]) => {
+            let mut ws = app.home.workspace(slug).map_err(|e| (404, e))?;
+            let model = text_of(body, "model")?.trim();
+            if model.is_empty() || model == "default" {
+                ws.info.model = None;
+            } else {
+                if model != "echo" {
+                    a30m_models::parse_spec(model).map_err(bad)?;
+                }
+                ws.info.model = Some(model.to_string());
+            }
+            ws.save_info().map_err(|e| (500, e))?;
+            Ok(json!({"model": crate::model_of(app, &ws)}))
         }
         (Method::Get, ["approvals"]) => Ok(json!({"waiting": app.approvals.pending(None)})),
         (Method::Post, ["approvals", id]) => {

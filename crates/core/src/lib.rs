@@ -27,6 +27,11 @@ pub enum Block {
         id: String,
         name: String,
         input: Value,
+        /// What a provider needs back with this call on the next turn
+        /// (Gemini's thought signature, say). Never sent to a provider
+        /// that did not give it.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        extra: Option<Value>,
     },
     ToolResult {
         tool_use_id: String,
@@ -118,9 +123,9 @@ pub fn run(
             .content
             .iter()
             .filter_map(|b| match b {
-                Block::ToolUse { id, name, input } => {
-                    Some((id.clone(), name.clone(), input.clone()))
-                }
+                Block::ToolUse {
+                    id, name, input, ..
+                } => Some((id.clone(), name.clone(), input.clone())),
                 _ => None,
             })
             .collect();
@@ -228,6 +233,7 @@ mod tests {
             id: id.into(),
             name: name.into(),
             input: json!({}),
+            extra: None,
         }
     }
 
