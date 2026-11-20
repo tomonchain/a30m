@@ -1,15 +1,44 @@
 # Decisions
 
-## 162. Airth works on Airth, inside a space of its own
+## 164. Agents, skills and connectors in open formats, imported from catalogs
 
-**Accepted** (founder, 20 November 2026: "I'd like Airth to work on Airth fairly quickly").
+**Proposed** (founder, 20 November 2026: "I want to import agents from the known libraries, no proprietary agent format; connectors the same; a catalog can be imported").
 
-- **Airth is a pro space like any business,** added once phase 1's gate passes, beside Hedgen.
+- **No a30m agent format.** An agent is an [Agent Plugins 1.0](https://aaif.io/blog/from-skills-and-tools-to-portable-agent-plugins) package: a `plugin.json`, its [Agent Skills](https://agentskills.io/home) (`SKILL.md` folders) and its MCP servers (`mcp.json`). Its standing instructions are an `AGENTS.md`. What a30m adds (which workspace, its autonomy levels, its budget) lives in the workspace, never in the package, so the same package goes back out unchanged.
+- **Import from the formats people already use.** Agent Plugins and Agent Skills as they are; Claude Code's agents and plugins, and the common agent frameworks, through an importer each that turns them into the above and says what it could not carry. Export goes the same way.
+- **Connectors are MCP servers, and nothing else.** No a30m connector API.
+- **A catalog is a URL.** For connectors, any registry speaking the [MCP Registry](https://modelcontextprotocol.io/registry/about) API (`server.json`, v0.1): the official one, or a company's own. For agents and skills, a git repository or a plugin marketplace. The owner adds catalogs; nothing in a catalog is installed without the owner's word.
+- **Imported means untrusted.** An imported agent gets no autonomy it has not earned in this workspace: every tool it calls goes through the gate (decision 163), and what commits waits for the owner.
+
+*Why:* the owner should not be locked into a30m, and should be able to use what the ecosystem already makes. There is no common agent format across frameworks yet; Agent Plugins, Agent Skills, AGENTS.md and MCP are the open pieces most clients read.
+
+*Cost:* one importer per foreign format, each partial: what a framework expresses in code (a custom graph, a callback) does not import. Agent Plugins 1.0 leaves agents, hooks and commands out of its portable core, so those parts stay per-client. Changes 14, 74 and 149.
+
+## 163. Agent first: the agent is free, the gate decides at the action
+
+**Proposed** (founder, 20 November 2026: "I want something as fluid as OpenBot, Grok Bot, Hark Pro…; what we had before was too rigid").
+
+- **One assistant the owner talks to,** in the app. It knows the workspaces; the owner names one, or it infers one and confirms. It hands work to agents inside a workspace, which only see that workspace.
+- **Agents work in a loop with tools** (MCP connectors, the web, files), with memory, in the background. They report when done or when blocked. Nothing to design first: no graph, no department, no role to declare.
+- **Proactive:** it watches what the owner connects (mail, X, calendar) and proposes cards.
+- **Recurring work is created by talking:** "every morning, propose three posts" becomes a scheduled task: an instruction, a schedule, the tools it may use.
+- **Control moves to the action.** Every tool call goes through the gate: it is classed read, reversible or commits. Reads and reversible actions run; what commits waits for the owner (decision 56), on the phone. Trust is earned per kind of action (decision 153).
+- **Crystallise what works.** A scheduled task that has run well for weeks can be frozen, on the owner's word, into a fixed recipe: faster, cheaper and predictable. Fluid first; rigid only where it has proved itself.
+
+*Why:* v0 put safety in the shape of the work (six-block graphs, a mandatory approval block, AI blocks without tools, roles and departments). Every new job needed a workflow designed first. Putting the control at the action keeps decision 56 and lets everything else flow.
+
+*Cost:* an agent loop spends more tokens and time than a fixed recipe, and its results vary more: v0's pick went from 9 minutes to 37 seconds through structure. Crystallising answers that for what repeats. The gate becomes the one safeguard, so its classing of each tool must be right: an MCP tool with no declared class is treated as committing. Changes 26, 36, 43, 49, 58, 60 and 79.
+
+## 162. a30m works on a30m, in a workspace of its own, and is the first pilot
+
+**Accepted** (founder, 20 November 2026: "I'd like Airth to work on Airth fairly quickly"; then "Hedgen as a pilot, yes, but above all a30m").
+
+- **a30m is the first pilot.** Its own workspace is the first one created, in phase 1, before Hedgen's.
 - **It starts read-only:** watching competitors, sorting GitHub issues, keeping the roadmap's inbox, a weekly summary of merged pull requests.
 - **Then level 1:** drafts of the changelog and docs, then pull requests on tests and documentation.
 - **Never:** a change to security code, merging its own pull requests, or widening its own rights. These limits are enforced by the repository (`.github/CODEOWNERS`, the auto-merge workflow's `security` label, branch protection), not by a prompt.
 
-*Why:* Airth is generic, its repository is public, and it holds no customer data: the safest real business to prove the product on, and a direct way to speed up its own building.
+*Why:* a30m is generic, its repository is public, and it holds no customer data: the safest real work to prove the product on, and a direct way to speed up its own building. Hedgen follows as the second pilot, once its content chain runs in a30m.
 
 *Cost:* an agent proposing changes to the code that governs agents. The limits above must hold before the first routine runs. Changes 105 (the Workshop).
 
@@ -51,17 +80,17 @@
 | Phase | Delivers | Gate |
 | --- | --- | --- |
 | 0. Foundations | Repository, license, CLA, CI, secret scanning, decisions carried over. No product code. | The founder approves the repository. |
-| 1. Server alone | The engine in Rust on a VPS, the owner account, device keys, Hedgen's content chain. | Hedgen runs a week without incident. |
+| 1. Server alone | The agent runtime in Rust on a VPS, the owner account, device keys, a30m's own workspace (decision 162), then Hedgen's. | a30m's workspace runs its tasks a week without incident. |
 | 2. Mac client | Install over SSH, pairing by QR code, the HQ. | A fresh install in under 10 minutes. |
 | 3. Mobile app | HQ, Needs you, approvals, push relay. | Telegram turned off. |
-| 4. Personal space | The founder's mail and calendar, read-only. | No leak between spaces in the tests. |
+| 4. Personal workspace | The founder's mail and calendar, read-only. | No leak between workspaces in the tests. |
 | 5. Partner host | A server created from the client, a subscription, the brand. | The first outside user. |
 
 - Anything outside this list goes to the roadmap's inbox. Waiting there already: a30m for companies (SSO, delegated rights, Bedrock), opt-in telemetry (signals, not content).
 
-*Why:* the client and server split, device pairing and spaces change the base. Building them on v0's single-machine code would cost more than starting clean with what v0 taught us.
+*Why:* the client and server split, device pairing, workspaces and an agent-first runtime (decision 163) change the base. Building them on v0's single-machine code would cost more than starting clean with what v0 taught us.
 
-*Cost:* weeks before a30m does what v0 does today. Hedgen keeps running on v0 until phase 1's gate passes.
+*Cost:* weeks before a30m does what v0 does today. Hedgen keeps running on v0 until its chain runs in a30m.
 
 ## 158. The phone and the client reach the server by IP on port 443, with a pinned certificate and device keys
 
@@ -106,15 +135,16 @@
 
 ## 155. a30m: a generalist assistant on the owner's server, for work and personal life
 
-**Accepted** (founder, 20 November 2026: "a more generalist software, a bit like Hark Pro"; "it must clearly separate pro and personal, for mailboxes, accounts, …").
+**Accepted** (founder, 20 November 2026: "a more generalist software, a bit like Hark Pro"; "it must clearly separate pro and personal, for mailboxes, accounts, …"; then "or we simply let the owner create workspaces, with no mention of pro or personal").
 
 - **One server the owner holds** (theirs, or one a partner host creates for them) runs everything and keeps all the data.
 - **A Mac client** installs and updates the server, and pairs devices by QR code. **A mobile app** steers and approves.
-- **Spaces:** a pro space per business (what v0 called a business), and a personal space. A mailbox, an account, an agent, a memory or a document belongs to one space. Nothing crosses between spaces by default; moving something across is an action that commits, so it needs the owner's explicit approval (decision 56), and it is logged.
-- The HQ and Needs you show every space, with a pro / personal filter.
-- One database per space, in the server's home, out of the agents' reach (decision 31's rule, per space).
+- **Workspaces.** The owner creates as many as they want: a company, a side project, their personal life, a family. a30m does not label them pro or personal; a workspace is a workspace. A company's workspace can carry a legal identity, as an option.
+- A mailbox, an account, an agent, a memory or a document belongs to one workspace. Nothing crosses between workspaces by default; moving something across is an action that commits, so it needs the owner's explicit approval (decision 56), and it is logged.
+- The HQ and Needs you show every workspace.
+- One database per workspace, in the server's home, out of the agents' reach (decision 31's rule, per workspace).
 - **Out of scope for now:** a cloud computer that browses for the user, voice, hardware.
 
 *Why:* Hark Pro (October 2026) runs a personal agent on its own cloud. The owner's server, data and keys are what sets a30m apart.
 
-*Cost:* personal data raises the stakes: the separation between spaces is a security boundary. Changes 32, 39, 53, 64, 106 and 109.
+*Cost:* personal data raises the stakes: the separation between workspaces is a security boundary. Changes 32, 39, 53, 64, 106 and 109.
