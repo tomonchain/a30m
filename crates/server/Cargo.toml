@@ -12,7 +12,14 @@ path = "src/main.rs"
 
 [dependencies]
 a30m-core = { path = "../core" }
+a30m-gate = { path = "../gate" }
+a30m-store = { path = "../store" }
+a30m-models = { path = "../models" }
+a30m-mcp = { path = "../mcp" }
 a30m-proto = { path = "../proto" }
+serde.workspace = true
+serde_json.workspace = true
+tiny_http.workspace = true
 
 [lints]
 workspace = true
