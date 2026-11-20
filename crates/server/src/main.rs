@@ -130,6 +130,10 @@ Be brief. Answer in the language the owner writes in.";
 
 pub fn system_prompt(ws: &Workspace) -> String {
     let mut s = SYSTEM.replace("{name}", &ws.info.name);
+    s.push_str(&format!(
+        "\n\nToday is {} (UTC).",
+        date_of(a30m_store::now())
+    ));
     let agents = ws.agents_md();
     if !agents.trim().is_empty() {
         s.push_str("\n\n# This workspace's instructions (AGENTS.md)\n\n");
@@ -143,6 +147,32 @@ pub fn system_prompt(ws: &Workspace) -> String {
         }
     }
     s
+}
+
+/// `YYYY-MM-DD, Weekday` for a Unix time, in UTC.
+pub fn date_of(seconds: u64) -> String {
+    let days = (seconds / 86_400) as i64;
+    // Howard Hinnant's civil_from_days.
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z.rem_euclid(146_097);
+    let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let day = doy - (153 * mp + 2) / 5 + 1;
+    let month = if mp < 10 { mp + 3 } else { mp - 9 };
+    let year = yoe + era * 400 + i64::from(month <= 2);
+    const WEEKDAYS: [&str; 7] = [
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+    ];
+    let weekday = WEEKDAYS[days.rem_euclid(7) as usize];
+    format!("{year:04}-{month:02}-{day:02}, {weekday}")
 }
 
 /// The workspace's model, or the server's default.
@@ -256,6 +286,14 @@ fn turn(app: &Arc<App>, ws: &Workspace, messages: &mut Vec<Message>) -> Result<(
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn dates_are_read_in_utc() {
+        assert_eq!(date_of(0), "1970-01-01, Thursday");
+        assert_eq!(date_of(1_795_208_899), "2026-11-20, Friday");
+        assert_eq!(date_of(951_782_400), "2000-02-29, Tuesday");
+        assert_eq!(date_of(1_709_164_800 + 86_399), "2024-02-29, Thursday");
+    }
 
     #[test]
     fn a_call_left_open_by_a_restart_is_closed_before_the_next_message() {

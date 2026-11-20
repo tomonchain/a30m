@@ -11,6 +11,25 @@ use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
 const MAX_READ: u64 = 256 * 1024;
+/// The most a tool's result may put in the conversation, in bytes. Every
+/// turn sends the whole conversation, so one huge result would make each
+/// later turn costly and soon overflow the model's context.
+const MAX_RESULT: usize = 100_000;
+
+fn bounded(text: String) -> String {
+    if text.len() <= MAX_RESULT {
+        return text;
+    }
+    let mut cut = MAX_RESULT;
+    while !text.is_char_boundary(cut) {
+        cut -= 1;
+    }
+    format!(
+        "{}\n[cut: {} more bytes not shown; ask for a narrower result]",
+        &text[..cut],
+        text.len() - cut
+    )
+}
 
 #[derive(Default)]
 pub struct McpHost {
@@ -203,6 +222,12 @@ impl Tools for WorkspaceTools<'_> {
     }
 
     fn call(&self, name: &str, input: &Value) -> Result<String, String> {
+        self.run(name, input).map(bounded).map_err(bounded)
+    }
+}
+
+impl WorkspaceTools<'_> {
+    fn run(&self, name: &str, input: &Value) -> Result<String, String> {
         match name {
             "list_files" => self.list_files(input),
             "read_file" => self.read_file(input),
@@ -231,6 +256,15 @@ mod tests {
         let home = a30m_store::Home::open(&dir).unwrap();
         let ws = home.create("test").unwrap();
         (dir, ws)
+    }
+
+    #[test]
+    fn long_results_are_cut_on_a_character() {
+        assert_eq!(bounded("short".into()), "short");
+        let long = "é".repeat(MAX_RESULT);
+        let cut = bounded(long);
+        assert!(cut.len() < MAX_RESULT + 100);
+        assert!(cut.ends_with("ask for a narrower result]"));
     }
 
     #[test]
