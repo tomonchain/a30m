@@ -389,9 +389,9 @@ mod tests {
     fn a_workspace_is_created_listed_and_found() {
         let dir = temp("ws");
         let home = Home::open(&dir).unwrap();
-        let ws = home.create("Hedgen Ltd").unwrap();
-        assert_eq!(ws.info.slug, "hedgen-ltd");
-        assert!(home.create("hedgen ltd").is_err());
+        let ws = home.create("Acme Ltd").unwrap();
+        assert_eq!(ws.info.slug, "acme-ltd");
+        assert!(home.create("acme ltd").is_err());
         assert_eq!(home.workspaces().len(), 1);
         assert!(home.workspace("../x").is_err());
         assert!(ws.files_dir().is_dir());
