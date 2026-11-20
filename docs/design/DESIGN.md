@@ -88,7 +88,7 @@ Pages are React components in `web/src/screens`; the shared frame is `Page`, `Se
 - **Agent avatar:** rounded square in the agent's colour with its icon; a small count badge for pending items, red `!` for an incident.
 - **Approval card:** tag (`Draft for X · needs you`), expiry on the right, the content, its source, what approving does, then Approve (primary), Edit, Reject (`--bad` text).
 - **Routine node:** card with block type, title, one-line result; the selected node opens its details in the right panel.
-- **Empty states** say what will fill the space and when ("From the Numirama MCP", "No bank account yet"), never a bare dash alone.
+- **Empty states** say what will fill the space and when ("From the shop's MCP server", "No bank account yet"), never a bare dash alone.
 
 ## Behaviour to keep
 
