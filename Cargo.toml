@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/core", "crates/server", "crates/proto"]
+members = ["crates/core", "crates/gate", "crates/store", "crates/models", "crates/mcp", "crates/server", "crates/proto"]
 
 [workspace.package]
 version = "0.0.0"
@@ -8,6 +8,12 @@ edition = "2024"
 license = "AGPL-3.0-only"
 repository = "https://github.com/tomonchain/a30m"
 publish = false
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tiny_http = "0.12"
+ureq = "3"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

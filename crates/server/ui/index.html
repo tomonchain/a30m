@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>a30m</title>
+<style>
+:root{--bg:#0F1011;--panel:#17181A;--card:#1D1F22;--raised:#23262A;--chip:#26292D;--line:#2A2D31;--text:#ECEDEE;--text-2:#C2C7CE;--text-3:#A3A9B1;--text-4:#8B929B;--accent:#8FA6FF;--ok:#5BD08D;--warn:#F5B353;--warn-bg:#2A2213;--bad:#FF9A9A;color-scheme:dark}
+@media (prefers-color-scheme:light){:root{--bg:#F4F4F5;--panel:#FFFFFF;--card:#FAFAFA;--raised:#EFEFF1;--chip:#EDEDEF;--line:#E4E4E7;--text:#09090B;--text-2:#27272A;--text-3:#5F5F66;--text-4:#71717A;--accent:#3B5BDB;--ok:#15803D;--warn:#B45309;--warn-bg:#FEF3E2;--bad:#DC2626;color-scheme:light}}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.55 -apple-system,"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex}
+button,input,textarea,select{font:inherit;color:inherit}
+button{background:var(--chip);border:1px solid var(--line);border-radius:10px;padding:8px 14px;min-height:40px;cursor:pointer}
+button.primary{background:var(--text);color:var(--bg);border-color:var(--text)}
+button:disabled{opacity:.5;cursor:default}
+input,textarea,select{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+textarea{resize:none;width:100%}
+code,pre,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+#rail{width:240px;flex:none;padding:16px 12px;display:flex;flex-direction:column;gap:6px;border-right:1px solid var(--line)}
+#rail h1{font-size:15px;margin:4px 8px 12px;letter-spacing:-.01em}
+.label{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--text-3);margin:12px 8px 4px}
+.ws{display:flex;align-items:center;gap:8px;padding:10px 10px;border-radius:10px;cursor:pointer;color:var(--text-2);min-height:44px}
+.ws:hover{background:var(--raised)}
+.ws.on{background:var(--raised);color:var(--text)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--warn);margin-left:auto}
+.dot.run{background:var(--ok)}
+#new{display:flex;gap:6px;margin-top:8px}
+#new input{flex:1;min-width:0}
+#main{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--panel);margin:12px 12px 12px 0;border-radius:16px;border:1px solid var(--line)}
+header{display:flex;align-items:center;gap:12px;padding:20px 28px 12px}
+header h2{margin:0;font-size:22px;font-weight:600;letter-spacing:-.015em}
+header .status{color:var(--text-4);font-size:12.5px}
+header .grow{flex:1}
+#agent{margin:0 28px 8px;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:var(--card);display:none}
+#agent.open{display:block}
+#agent .row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+#agent .row input{flex:1;min-width:200px}
+.chip{display:inline-block;background:var(--chip);border-radius:8px;padding:2px 8px;margin:2px 4px 2px 0;font-size:12.5px;color:var(--text-2)}
+.muted{color:var(--text-4);font-size:12.5px}
+#feed{flex:1;overflow-y:auto;padding:8px 28px 16px}
+.wrap{max-width:820px;margin:0 auto}
+.msg{margin:14px 0;white-space:pre-wrap;word-wrap:break-word;color:var(--text-2)}
+.msg.user{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 14px;color:var(--text);margin-left:15%}
+.tool{margin:6px 0;color:var(--text-4);font-size:12.5px}
+.tool summary{cursor:pointer;list-style:none}
+.tool summary::-webkit-details-marker{display:none}
+.tool pre{white-space:pre-wrap;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:6px 0;max-height:280px;overflow:auto;color:var(--text-3)}
+.tool.err summary{color:var(--bad)}
+.ask{border:1px solid var(--warn);background:var(--warn-bg);border-radius:14px;padding:12px 14px;margin:12px 0}
+.ask .tag{font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--warn)}
+.ask pre{white-space:pre-wrap;margin:8px 0;max-height:220px;overflow:auto}
+.ask .row{display:flex;gap:8px;align-items:center}
+.ask .row input{flex:1}
+.ask .no{color:var(--bad)}
+.error{color:var(--bad);margin:10px 0}
+#composer{padding:12px 28px 20px}
+#composer .wrap{display:flex;gap:8px;align-items:flex-end}
+.empty{color:var(--text-4);text-align:center;margin-top:18vh}
+@media (max-width:720px){body{flex-direction:column}#rail{width:auto;flex-direction:row;overflow-x:auto;border-right:none;border-bottom:1px solid var(--line);padding:8px}#rail h1,#rail .label,#new{display:none}#main{margin:0;border-radius:0}.msg.user{margin-left:0}}
+</style>
+</head>
+<body>
+<nav id="rail">
+  <h1>a30m</h1>
+  <div class="label">Workspaces</div>
+  <div id="list"></div>
+  <form id="new"><input id="newName" placeholder="New workspace" aria-label="New workspace name"><button>Add</button></form>
+</nav>
+<main id="main">
+  <div class="empty" id="none">Create a workspace to start.</div>
+</main>
+<script>
+const params = new URLSearchParams(location.hash.slice(1));
+if (params.get('t')) { sessionStorage.setItem('a30m-token', params.get('t')); history.replaceState(null, '', location.pathname); }
+const token = sessionStorage.getItem('a30m-token') || '';
+let current = localStorage.getItem('a30m-ws') || '';
+let state = null, sent = '';
+
+async function api(path, body) {
+  const opts = {headers: {'X-A30m-Token': token}};
+  if (body !== undefined) { opts.method = 'POST'; opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+  const r = await fetch('/api/' + path, opts);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || r.statusText);
+  return data;
+}
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const md = s => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+const short = v => { const s = typeof v === 'string' ? v : JSON.stringify(v); return s.length > 90 ? s.slice(0, 90) + '…' : s; };
+
+async function loadList() {
+  try {
+    const {workspaces} = await api('workspaces');
+    if (!current && workspaces[0]) current = workspaces[0].slug;
+    document.getElementById('list').innerHTML = workspaces.map(w =>
+      `<div class="ws ${w.slug === current ? 'on' : ''}" data-slug="${esc(w.slug)}">${esc(w.name)}${w.waiting ? '<span class="dot" title="Needs you"></span>' : w.running ? '<span class="dot run" title="Working"></span>' : ''}</div>`).join('');
+    document.querySelectorAll('.ws').forEach(el => el.onclick = () => { current = el.dataset.slug; localStorage.setItem('a30m-ws', current); state = null; loadList(); loadWs(); });
+  } catch (e) { document.getElementById('main').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+
+function shell() {
+  const main = document.getElementById('main');
+  if (document.getElementById('feed')) return;
+  main.innerHTML = `
+  <header><h2 id="title"></h2><span class="status" id="status"></span><span class="grow"></span><button id="agentBtn">Agent</button></header>
+  <section id="agent">
+    <div><b>Skills</b> <span id="skills"></span></div>
+    <div style="margin-top:6px"><b>MCP servers</b> <span id="mcp"></span></div>
+    <div class="row"><input id="importPath" placeholder="Folder of an Agent Plugin or a skill, on the server's machine"><button id="importBtn">Import</button></div>
+    <div class="row"><input id="clsTool" placeholder="Tool name, e.g. mcp__github__create_issue"><select id="clsVal"><option value="read">read</option><option value="reversible">reversible</option><option value="commits">commits</option><option value="default">default</option></select><button id="clsBtn">Set class</button></div>
+    <div class="muted" id="agentMsg" style="margin-top:8px">Instructions live in the workspace's agent/AGENTS.md, on the server.</div>
+  </section>
+  <div id="feed"><div class="wrap" id="wrap"></div></div>
+  <form id="composer"><div class="wrap"><textarea id="text" rows="2" placeholder="Ask a30m…"></textarea><button class="primary" id="send">Send</button></div></form>`;
+  document.getElementById('agentBtn').onclick = () => document.getElementById('agent').classList.toggle('open');
+  document.getElementById('composer').onsubmit = async e => {
+    e.preventDefault();
+    const t = document.getElementById('text');
+    const text = t.value.trim(); if (!text) return;
+    try { await api(`workspaces/${current}/messages`, {text}); t.value = ''; sent = text; loadWs(); }
+    catch (err) { alertIn(err.message); }
+  };
+  document.getElementById('text').onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); document.getElementById('composer').requestSubmit(); } };
+  document.getElementById('importBtn').onclick = async () => {
+    const path = document.getElementById('importPath').value.trim(); if (!path) return;
+    try { const r = await api(`workspaces/${current}/import`, {path}); agentMsg('Imported: ' + r.imported.join(', ') + '. Servers start with the next message.'); loadWs(); }
+    catch (err) { agentMsg(err.message, true); }
+  };
+  document.getElementById('clsBtn').onclick = async () => {
+    const tool = document.getElementById('clsTool').value.trim(); if (!tool) return;
+    try { await api(`workspaces/${current}/classes`, {tool, class: document.getElementById('clsVal').value}); agentMsg('Saved: ' + tool + ' is ' + document.getElementById('clsVal').value + '.'); loadWs(); }
+    catch (err) { agentMsg(err.message, true); }
+  };
+}
+const agentMsg = (m, bad) => { const el = document.getElementById('agentMsg'); el.textContent = m; el.style.color = bad ? 'var(--bad)' : ''; };
+const alertIn = m => { const w = document.getElementById('wrap'); w.insertAdjacentHTML('beforeend', `<div class="error">${esc(m)}</div>`); };
+
+function render() {
+  const s = state; if (!s) return;
+  document.getElementById('title').textContent = s.workspace.name;
+  document.getElementById('status').textContent = s.waiting.length ? 'Waiting for you' : s.running ? 'Working…' : '';
+  document.getElementById('send').disabled = s.running;
+  document.getElementById('skills').innerHTML = s.skills.length ? s.skills.map(k => `<span class="chip" title="${esc(k.description)}">${esc(k.name)}</span>`).join('') : '<span class="muted">none</span>';
+  const run = s.mcp.running.map(m => `<span class="chip">${esc(m.name)} · ${m.tools} tools</span>`).join('');
+  const decl = s.mcp.declared.filter(n => !s.mcp.running.some(m => m.name === n)).map(n => `<span class="chip">${esc(n)} · starts on next message</span>`).join('');
+  const errs = s.mcp.errors.map(e => `<div class="error">${esc(e)}</div>`).join('');
+  document.getElementById('mcp').innerHTML = (run + decl) || '<span class="muted">none</span>'; document.getElementById('mcp').insertAdjacentHTML('beforeend', errs);
+  const results = {};
+  s.messages.forEach(m => m.content.forEach(b => { if (b.type === 'tool_result') results[b.tool_use_id] = b; }));
+  let html = '';
+  if (!s.messages.length) html = '<div class="empty">What should a30m do in this workspace?</div>';
+  for (const m of s.messages) {
+    for (const b of m.content) {
+      if (b.type === 'text' && b.text.trim()) html += `<div class="msg ${m.role}">${m.role === 'user' ? esc(b.text) : md(b.text)}</div>`;
+      if (b.type === 'tool_use') {
+        const r = results[b.id];
+        const out = r ? r.content : 'running…';
+        html += `<details class="tool ${r && r.is_error ? 'err' : ''}"><summary>→ ${esc(b.name)} <span class="mono">${esc(short(b.input))}</span>${r && r.is_error ? ' · failed' : ''}</summary><pre>${esc(JSON.stringify(b.input, null, 2))}</pre><pre>${esc(out)}</pre></details>`;
+      }
+    }
+  }
+  for (const a of s.waiting) {
+    html += `<div class="ask"><div class="tag">Needs you · ${esc(a.class)}</div><div style="margin-top:4px">The agent wants to run <b class="mono">${esc(a.tool)}</b>:</div><pre class="mono">${esc(JSON.stringify(a.input, null, 2))}</pre>
+      <div class="row"><button class="primary" data-ok="${a.id}">Approve</button><input data-why="${a.id}" placeholder="Why not? (optional)"><button class="no" data-no="${a.id}">Refuse</button></div></div>`;
+  }
+  if (s.running && !s.waiting.length) html += '<div class="muted">Working…</div>';
+  if (s.error) html += `<div class="error">${esc(s.error)}</div>`;
+  const feed = document.getElementById('feed');
+  const atBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 80;
+  document.getElementById('wrap').innerHTML = html;
+  if (atBottom || sent) { feed.scrollTop = feed.scrollHeight; sent = ''; }
+  document.querySelectorAll('[data-ok]').forEach(b => b.onclick = () => answer(b.dataset.ok, true));
+  document.querySelectorAll('[data-no]').forEach(b => b.onclick = () => answer(b.dataset.no, false, document.querySelector(`[data-why="${b.dataset.no}"]`).value));
+}
+
+async function answer(id, approve, reason) {
+  try { await api('approvals/' + id, {approve, reason: reason || ''}); loadWs(); } catch (e) { alertIn(e.message); }
+}
+
+let timer;
+async function loadWs() {
+  clearTimeout(timer);
+  if (!current) { timer = setTimeout(() => { loadList(); loadWs(); }, 3000); return; }
+  shell();
+  try { state = await api('workspaces/' + current); render(); } catch (e) { current = ''; localStorage.removeItem('a30m-ws'); }
+  timer = setTimeout(() => { loadList(); loadWs(); }, state && (state.running || state.waiting.length) ? 1200 : 4000);
+}
+
+document.getElementById('new').onsubmit = async e => {
+  e.preventDefault();
+  const name = document.getElementById('newName').value.trim(); if (!name) return;
+  try { const r = await api('workspaces', {name}); current = r.slug; localStorage.setItem('a30m-ws', current); document.getElementById('newName').value = ''; state = null; await loadList(); loadWs(); }
+  catch (err) { alert(err.message); }
+};
+if (!token) document.getElementById('main').innerHTML = '<div class="empty">Open the address the server printed when it started (it ends with #t=…).</div>';
+else { loadList().then(loadWs); }
+</script>
+</body>
+</html>
