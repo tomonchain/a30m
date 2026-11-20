@@ -1,0 +1,23 @@
+# Build output
+/target/
+
+# Secrets: never committed
+.env
+.env.*
+*.pem
+*.key
+*.p12
+secrets.env
+
+# Private business data: lives in its own private repository
+hedgen-business/
+
+# A copy of a real home, used to test a development build
+.airth/
+airth-home*/
+a30m-home*/
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/
