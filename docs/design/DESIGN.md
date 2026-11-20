@@ -1,4 +1,4 @@
-> Copied from Airth v0 (`docs/design/DESIGN.md` at tag `v0-final`, decision 159). The mockups, `web/` and `CLAUDE.md` it mentions are in that repository. Where it says business, a30m says space (decision 155).
+> Copied from Airth v0 (`docs/design/DESIGN.md` at tag `v0-final`, decision 159). The mockups, `web/` and `CLAUDE.md` it mentions are in that repository. Where it says business, a30m says workspace (decision 155).
 
 # Airth interface design
 
