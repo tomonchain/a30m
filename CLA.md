@@ -16,7 +16,7 @@ This includes the right to distribute them under licenses other than the GNU AGP
 
 ## 3. Patent license
 
-You grant the Maintainer, and everyone who receives the project from the Maintainer, a perpetual, worldwide, non-exclusive, royalty-free, irrevocable license under any patent you hold that your contribution would otherwise infringe, to make, use, sell and distribute the project with your contribution. If anyone sues claiming the project infringes a patent, the patent license they received under this section ends on the date the suit is filed.
+You grant the Maintainer, and everyone who receives the project from the Maintainer, a perpetual, worldwide, non-exclusive, royalty-free, irrevocable license under any patent you hold that your contribution would otherwise infringe, alone or combined with the project as it stood when you submitted it, to make, use, sell and distribute the project with your contribution. If anyone sues claiming the project infringes a patent, the patent license they received under this section ends on the date the suit is filed.
 
 ## 4. What you confirm
 
@@ -34,4 +34,6 @@ The Maintainer may transfer this agreement to a company that takes over the proj
 
 ## How to sign
 
-When you open your first pull request, a bot asks you to sign. Reply with the sentence it gives. Your GitHub username, the date and the pull request are recorded in the `cla-signatures` branch of this repository.
+When you open your first pull request, a bot asks you to sign. Reply with the sentence it gives.
+
+Your GitHub username and id, the date and the pull request are recorded in the `cla-signatures` branch of this repository. The repository is public, so anyone can read that record. It is kept as long as the project uses your contribution, because it is the proof of the rights you granted.
