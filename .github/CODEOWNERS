@@ -1,0 +1,9 @@
+# Security boundaries and the project's rules. A pull request that touches
+# one of these paths is labelled `security` by the auto-merge workflow and
+# waits for the founder.
+/crates/proto/   @tomonchain
+/.github/        @tomonchain
+/docs/security/  @tomonchain
+/LICENSE         @tomonchain
+/NOTICE          @tomonchain
+/CLA.md          @tomonchain
