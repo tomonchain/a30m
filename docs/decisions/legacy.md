@@ -103,7 +103,7 @@ The full texts are in [v0's decisions](https://github.com/tomonchain/airth/blob/
 | 66 | The legal calendar: deadlines computed from the legal identity, by rules written as data with their source | Kept | The legal calendar, for company workspaces. |
 | 65 | Agent characters: drawn by code from a seed saved when the agent is hired | Kept | Agent characters drawn from a seed. |
 | 64 | The command bar: an order is a task run by one agent, routed by the fast model when not named | Revisit | The one assistant takes the command bar's place (163). |
-| 63 | Replies: the founder sends a post's link on Telegram; Airth drafts the reply into Typefully, never onto X | Kept | Hedgen's replies; the Telegram entry point moves to the app's share sheet. |
+| 63 | Replies: the founder sends a post's link on Telegram; Airth drafts the reply into Typefully, never onto X | Kept | The pilot's replies; the Telegram entry point moves to the app's share sheet. |
 | 62 | The founder can retry a failed action from its incident, once it is clear nothing was done | Kept | Retry from an incident once nothing was done. |
 | 61 | What a run drops reaches the founder: a note on its remaining items, and the weekly count | Kept | What a run drops reaches the owner. |
 | 60 | An AI block can judge its whole list in one call, and can use the realm's fast model | Revisit | Judging a list in one call, for crystallised recipes (163). |
@@ -140,7 +140,7 @@ The full texts are in [v0's decisions](https://github.com/tomonchain/airth/blob/
 | 28 | The approval queue reaches the owner's phone through a Telegram bot | Superseded | The mobile app replaces the Telegram bot at phase 3 (155, 159). |
 | 27 | The owner's time is a recorded quantity | Kept | The owner's time stays a recorded quantity. |
 | 26 | Business operations are pipelines of tested steps; the model only judges | Superseded | Agents work in a loop with tools; fixed recipes only where work has proved itself (163). |
-| 25 | The surface is frozen until the Hedgen pilot proves itself | Superseded | The surface is now set by the phases (159). |
+| 25 | The surface is frozen until the pilot business proves itself | Superseded | The surface is now set by the phases (159). |
 | 24 | Benchmarks drive real runs through the hub, in throwaway realms, and verify outcomes themselves | Superseded | Replaced by the security scenarios (67), now specs in docs/security (159). |
 | 23 | Requests are shaped for the provider's prompt cache | Kept | Requests shaped for the prompt cache. |
 | 22 | The app serves each request on its own thread; settings changes stay serialized | Revisit | Threading model re-decided with decision 1, at phase 1. |

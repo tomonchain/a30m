@@ -66,14 +66,14 @@
 
 ## 162. a30m works on a30m, in a workspace of its own, and is the first pilot
 
-**Accepted** (founder, 20 November 2026: "I'd like Airth to work on Airth fairly quickly"; then "Hedgen as a pilot, yes, but above all a30m").
+**Accepted** (founder, 20 November 2026: "I'd like Airth to work on Airth fairly quickly"; then the founder's company as a pilot, "but above all a30m").
 
-- **a30m is the first pilot.** Its own workspace is the first one created, in phase 1, before Hedgen's.
+- **a30m is the first pilot.** Its own workspace is the first one created, in phase 1, before the founder's company's.
 - **It starts read-only:** watching competitors, sorting GitHub issues, keeping the roadmap's inbox, a weekly summary of merged pull requests.
 - **Then level 1:** drafts of the changelog and docs, then pull requests on tests and documentation.
 - **Never:** a change to security code, merging its own pull requests, or widening its own rights. These limits are enforced by the repository (`.github/CODEOWNERS`, the auto-merge workflow's `security` label, branch protection), not by a prompt.
 
-*Why:* a30m is generic, its repository is public, and it holds no customer data: the safest real work to prove the product on, and a direct way to speed up its own building. Hedgen follows as the second pilot, once its content chain runs in a30m.
+*Why:* a30m is generic, its repository is public, and it holds no customer data: the safest real work to prove the product on, and a direct way to speed up its own building. The founder's company follows as the second pilot, once its chain of routines runs in a30m.
 
 *Cost:* an agent proposing changes to the code that governs agents. The limits above must hold before the first routine runs. Changes 105 (the Workshop).
 
@@ -93,15 +93,15 @@
 
 **Proposed** (20 November 2026). The license and the CLA are each in a pull request labelled `decision`.
 
-- **Owner:** Thomas Bazire, personally. Not Hedgen Ltd: Hedgen is a user of Airth, not its owner.
+- **Owner:** the founder, personally, as named in `NOTICE`. Not one of their companies: those are users of a30m, not its owner.
 - **A company of its own** takes the code over by assignment at phase 5 (first paid subscription) or at a fundraising, whichever comes first. Where it is incorporated is an accountant's question.
 - **License:** GNU AGPL-3.0 (`AGPL-3.0-only`). Anyone who runs a modified a30m for users over a network must offer those users the source of their version (section 13), which protects the hosted offer.
 - **CLA:** contributors keep their copyright and grant the right to relicense. Organisations that ban the AGPL can buy a commercial license (dual licensing). The CLA is reviewed by a lawyer before the first outside contribution.
 - **Chosen once, before the first outside contributor, and never changed quietly.**
 
-*Why:* a fundraising or a sale needs a company that holds only a30m. Taking code out of Hedgen later would be an assignment between companies, with a valuation and tax consequences. The AGPL keeps real open source, which v0's FSL was not, while protecting a hosted offer.
+*Why:* a fundraising or a sale needs a company that holds only a30m. Taking code out of an operating company later would be an assignment between companies, with a valuation and tax consequences. The AGPL keeps real open source, which v0's FSL was not, while protecting a hosted offer.
 
-*Cost:* a selling founder carries the liability until the company exists, so nothing is sold before it. Some companies will not touch the AGPL; the commercial license is for them. Airth v0 was published under FSL-1.1-ALv2 with Hedgen Ltd as copyright holder: what a30m takes from it (decisions, the design system, the scenarios' specs) is taken with Hedgen's consent, which its director gives.
+*Cost:* a selling founder carries the liability until the company exists, so nothing is sold before it. Some companies will not touch the AGPL; the commercial license is for them. Airth v0 was published under FSL-1.1-ALv2 by a company of the founder's: what a30m takes from it (decisions, the design system, the scenarios' specs) is taken with that company's consent, which its director gives.
 
 ## 159. We start again in a new repository; milestone 7 is paused
 
@@ -115,7 +115,7 @@
 | Phase | Delivers | Gate |
 | --- | --- | --- |
 | 0. Foundations | Repository, license, CLA, CI, secret scanning, decisions carried over. No product code. | The founder approves the repository. |
-| 1. The team and the lead | The agent runtime on a VPS, the owner account, device keys; hired agents, groups, the lead, conversations, routines (decision 163); a30m's own workspace first (162), then Hedgen's. | a30m's workspace runs a week without incident. |
+| 1. The team and the lead | The agent runtime on a VPS, the owner account, device keys; hired agents, groups, the lead, conversations, routines (decision 163); a30m's own workspace first (162), then the founder's company's. | a30m's workspace runs a week without incident. |
 | 2. Mac client and engines | Install over SSH, pairing by QR code; Codex and Claude Code engines (166). | A fresh install in under 10 minutes. |
 | 3. The phone | Talking to agents, notifications, approval cards, push relay. | Telegram turned off. |
 | 4. Personal life | Calendar and mail, read-only first: birthdays, deadlines, reminders. | No leak between workspaces in the tests. |
@@ -126,7 +126,7 @@
 
 *Why:* the client and server split, device pairing, workspaces and an agent-first runtime (decision 163) change the base. Building them on v0's single-machine code would cost more than starting clean with what v0 taught us.
 
-*Cost:* weeks before a30m does what v0 does today. Hedgen keeps running on v0 until its chain runs in a30m.
+*Cost:* weeks before a30m does what v0 does today. The pilot company keeps running on v0 until its chain runs in a30m.
 
 ## 158. The phone and the client reach the server by IP on port 443, with a pinned certificate and device keys
 
@@ -165,7 +165,7 @@
 - **The data model still holds an organisation and roles from V1:** one organisation, one member. Cheap now, painful to add later.
 - **a30m for companies** (SSO, provisioning, agents acting with the employee's own OAuth token, Bedrock in the customer's AWS account, an admin console) waits in the inbox.
 
-*Why:* a market the founder knows from the inside, where Hedgen is the proof. Companies would put a30m against vendors that already sell agent governance.
+*Why:* a market the founder knows from the inside, where the founder's own company is the proof. Companies would put a30m against vendors that already sell agent governance.
 
 *Cost:* a narrower first market. The organisation field is carried everywhere with a single value for a long time.
 
