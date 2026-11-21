@@ -1,16 +1,16 @@
 import { useLayoutEffect, useRef, useState } from 'react'
-import { MessageSquarePlus, Sparkles, Square } from 'lucide-react'
+import { ArrowUp, MessageSquarePlus, Sparkles, Square } from 'lucide-react'
 import { toast } from 'sonner'
 import { api, type Block, type WorkspaceState } from '@/lib/api'
 import { says } from '@/lib/says'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/input'
-import { Dialog } from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Markdown } from '@/components/markdown'
 import { ApprovalCard } from '@/components/approval'
 import { TOOL_ICONS } from '@/components/icons'
-import { Column, Empty, PageHead, Pill, Scroll } from '@/components/page'
+import { Pill } from '@/components/page'
 
 type Result = Extract<Block, { type: 'tool_result' }>
 
@@ -24,6 +24,7 @@ export function Chat({ slug, name, state, refresh, onSettings }: { slug: string;
   const [text, setText] = useState('')
   const [confirm, setConfirm] = useState(false)
   const scroller = useRef<HTMLDivElement>(null)
+  const box = useRef<HTMLTextAreaElement>(null)
   const stick = useRef(true)
 
   const results: Record<string, Result> = {}
@@ -51,93 +52,108 @@ export function Chat({ slug, name, state, refresh, onSettings }: { slug: string;
       toast.error((e as Error).message)
     }
   }
+  const stop = async () => {
+    try { await api(`workspaces/${slug}/stop`, {}); toast('Stopping the agent.'); refresh() } catch (e) { toast.error((e as Error).message) }
+  }
 
   const rows: React.ReactNode[] = []
-  let last: string = 'user'
+  let last = 'user'
   state.messages.forEach((m, mi) => m.content.forEach((b, bi) => {
     const key = `${mi}.${bi}`
     const shows = b.type === 'tool_use' || (b.type === 'text' && b.text.trim())
     if (m.role === 'assistant' && shows && last !== 'assistant') {
-      rows.push(<div key={key + 'w'} className="mt-5 -mb-1.5 flex items-center gap-2 text-secondary font-semibold text-text-3"><span className="grid size-6 place-items-center rounded-[7px] bg-[#4FCB8F] text-[#08261A]"><Sparkles className="size-3.5" strokeWidth={2.2} /></span>a30m</div>)
+      rows.push(
+        <div key={key + 'w'} className="mt-6 mb-1.5 flex items-center gap-2 text-sm font-medium">
+          <span className="grid size-6 place-items-center rounded-lg bg-foreground text-background"><Sparkles className="size-3.5" strokeWidth={2.2} /></span>a30m
+        </div>,
+      )
       last = 'assistant'
     }
     if (m.role === 'user' && b.type === 'text') last = 'user'
     if (b.type === 'text' && b.text.trim()) {
       rows.push(m.role === 'user'
-        ? <div key={key} className="my-4 ml-auto w-fit max-w-[78%] rounded-[14px] border border-line bg-card px-3.5 py-2.5 whitespace-pre-wrap text-text [overflow-wrap:anywhere] max-[720px]:max-w-[88%]">{b.text}</div>
-        : <div key={key} className="my-4"><Markdown text={b.text} /></div>)
+        ? <div key={key} className="my-4 ml-auto w-fit max-w-[80%] rounded-2xl rounded-br-md bg-me px-3.5 py-2 whitespace-pre-wrap text-me-foreground [overflow-wrap:anywhere]">{b.text}</div>
+        : <div key={key} className="my-2"><Markdown text={b.text} /></div>)
     }
     if (b.type === 'tool_use') {
       const r = results[b.id]
       const said = says(b.name, b.input)
       const Icon = TOOL_ICONS[said.icon]
       rows.push(
-        <details key={b.id} className={cn('group my-1 text-secondary text-text-4', r?.is_error && 'text-bad')}>
-          <summary className="flex cursor-pointer list-none items-center gap-2 py-0.5 [&::-webkit-details-marker]:hidden">
-            <Icon className="size-[15px] shrink-0" strokeWidth={1.8} />
+        <details key={b.id} className={cn('group my-1 text-sm text-muted-foreground', r?.is_error && 'text-red-500')}>
+          <summary className="flex cursor-pointer list-none items-center gap-2 py-0.5 hover:text-foreground [&::-webkit-details-marker]:hidden">
+            <Icon className="size-4 shrink-0" strokeWidth={1.8} />
             <span className="truncate">{said.text}{!r && ' …'}{r?.is_error && ' · failed'}</span>
           </summary>
-          <pre className="my-1.5 max-h-72 overflow-auto rounded-[10px] border border-line bg-card px-2.5 py-2 font-mono whitespace-pre-wrap text-text-3">{JSON.stringify(b.input, null, 2)}</pre>
-          {r && <pre className="my-1.5 max-h-72 overflow-auto rounded-[10px] border border-line bg-card px-2.5 py-2 font-mono whitespace-pre-wrap text-text-3">{r.content}</pre>}
+          <pre className="my-1.5 max-h-72 overflow-auto rounded-xl bg-bubble px-3 py-2 font-mono text-xs whitespace-pre-wrap">{JSON.stringify(b.input, null, 2)}</pre>
+          {r && <pre className="my-1.5 max-h-72 overflow-auto rounded-xl bg-bubble px-3 py-2 font-mono text-xs whitespace-pre-wrap">{r.content}</pre>}
         </details>,
       )
     }
   }))
 
-  const status = state.waiting.length ? <Pill tone="wait">Waiting for you</Pill> : state.running ? <Pill tone="run">Working</Pill> : null
-
   return (
-    <>
-      <PageHead label={name} title="Chat" summary={status} actions={<>
-        {state.running && (
-          <Button variant="danger" title="Stop the agent: what waits for you is refused, nothing more runs" onClick={async () => {
-            try { await api(`workspaces/${slug}/stop`, {}); toast('Stopping the agent.'); refresh() } catch (e) { toast.error((e as Error).message) }
-          }}><Square /><span className="max-[720px]:hidden">Stop</span></Button>
-        )}
+    <div className="flex min-h-0 flex-1 flex-col">
+      <header className="flex h-14 shrink-0 items-center gap-3 px-5 max-md:px-3">
+        <h1 className="truncate text-[15px] font-semibold">{name}</h1>
+        {state.waiting.length ? <Pill tone="wait">Waiting for you</Pill> : state.running ? <Pill tone="run">Working</Pill> : null}
+        <span className="flex-1" />
+        {state.running && <Button variant="destructive" onClick={stop} title="Stop the agent: what waits for you is refused, nothing more runs"><Square />Stop</Button>}
         <Button variant="ghost" disabled={state.running || !state.messages.length} onClick={() => setConfirm(true)} title="Start a new conversation; this one is kept">
-          <MessageSquarePlus /><span className="max-[720px]:hidden">New conversation</span>
+          <MessageSquarePlus /><span className="max-md:hidden">New conversation</span>
         </Button>
-      </>} />
-      <Scroll ref={scroller} onScroll={onScroll}>
-        <Column>
+      </header>
+      <div ref={scroller} onScroll={onScroll} className="min-h-0 flex-1 overflow-y-auto px-5 max-md:px-4">
+        <div className="mx-auto max-w-3xl pb-6">
           {!state.model_ready && (
-            <div className="my-4 flex items-center gap-3 rounded-2xl border border-warn bg-warn-bg px-4 py-3">
-              <span className="flex-1 text-text">No model is connected to this workspace yet.</span>
-              <Button variant="primary" onClick={onSettings}>Connect a model</Button>
+            <div className="my-4 flex items-center gap-3 rounded-xl bg-amber-500/10 px-4 py-3 text-sm">
+              <span className="flex-1">No model is connected to this workspace yet.</span>
+              <Button onClick={onSettings}>Connect a model</Button>
             </div>
           )}
           {!state.messages.length && (
-            <Empty title="What should a30m do here?">
-              Ask in plain words. Anything that sends, pays, publishes or reaches outside waits for you.
-              <div className="mt-5 flex flex-wrap justify-center gap-2">
-                {SUGGESTIONS.map(s => <button key={s} type="button" onClick={() => { setText(s); document.getElementById('ask')?.focus() }} className="cursor-pointer rounded-full border border-line bg-card px-3 py-1.5 text-secondary text-text-2 hover:border-text-5">{s}</button>)}
+            <div className="mx-auto mt-[14vh] max-w-md text-center">
+              <h2 className="text-2xl font-semibold tracking-tight">What should a30m do?</h2>
+              <p className="mt-1.5 text-sm text-muted-foreground">Ask in plain words. Anything that sends, pays, publishes or reaches outside waits for you.</p>
+              <div className="mt-6 flex flex-col items-center gap-2">
+                {SUGGESTIONS.map(s => (
+                  <button key={s} type="button" onClick={() => { setText(s); box.current?.focus() }}
+                    className="rounded-full bg-bubble px-3.5 py-1.5 text-sm text-foreground/80 transition-colors hover:bg-accent hover:text-foreground">{s}</button>
+                ))}
               </div>
-            </Empty>
+            </div>
           )}
           {rows}
           {state.waiting.map(a => <ApprovalCard key={a.id} a={a} onDone={refresh} />)}
           {state.running && !state.waiting.length && (
-            <div className="my-3 flex items-center gap-2 text-secondary text-text-4"><span className="size-[7px] animate-[pulse-dot_1.2s_infinite] rounded-full bg-ok" />Working…</div>
+            <div className="my-3 flex items-center gap-2 text-sm text-muted-foreground"><span className="size-1.5 animate-pulse rounded-full bg-emerald-500" />Working…</div>
           )}
-          {state.error && <div className="my-2.5 text-secondary text-bad">{state.error}</div>}
-        </Column>
-      </Scroll>
-      <form className="px-8 pt-3 pb-5 max-[720px]:px-3 max-[720px]:pt-2 max-[720px]:pb-[max(12px,env(safe-area-inset-bottom))]" onSubmit={e => { e.preventDefault(); send() }}>
-        <Column className="flex items-end gap-2 rounded-[14px] border border-line bg-card py-1.5 pr-1.5 pl-1">
-          <Textarea id="ask" rows={1} value={text} placeholder="Ask a30m…" className="max-h-[200px] border-0 bg-transparent field-sizing-content"
+          {state.error && <div className="my-3 text-sm text-red-500">{state.error}</div>}
+        </div>
+      </div>
+      <form className="shrink-0 px-5 pt-2 pb-5 max-md:px-3 max-md:pb-[max(12px,env(safe-area-inset-bottom))]" onSubmit={e => { e.preventDefault(); send() }}>
+        <div className="mx-auto flex max-w-3xl items-end gap-2 rounded-2xl bg-bubble p-2 ring-1 ring-foreground/5 focus-within:ring-foreground/15">
+          <Textarea ref={box} rows={1} value={text} placeholder={`Ask a30m in ${name}…`}
+            className="max-h-[200px] min-h-9 resize-none border-0 bg-transparent shadow-none focus-visible:ring-0 dark:bg-transparent"
             onChange={e => setText(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); send() } }} />
-          <Button variant="primary" type="submit" disabled={state.running || !text.trim()}>Send</Button>
-        </Column>
-      </form>
-      <Dialog open={confirm} onOpenChange={setConfirm} title="Start a new conversation?" description="This one is kept on the server, but the agent will no longer see it.">
-        <div className="mt-4 flex justify-end gap-2">
-          <Button variant="ghost" onClick={() => setConfirm(false)}>Cancel</Button>
-          <Button variant="primary" onClick={async () => {
-            try { await api(`workspaces/${slug}/conversation/new`, {}); setConfirm(false); refresh() } catch (e) { toast.error((e as Error).message) }
-          }}>New conversation</Button>
+          <Button type="submit" size="icon-lg" className="rounded-full" disabled={state.running || !text.trim()} aria-label="Send"><ArrowUp /></Button>
         </div>
+      </form>
+      <Dialog open={confirm} onOpenChange={setConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Start a new conversation?</DialogTitle>
+            <DialogDescription>This one is kept on the server, but the agent will no longer see it.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setConfirm(false)}>Cancel</Button>
+            <Button onClick={async () => {
+              try { await api(`workspaces/${slug}/conversation/new`, {}); setConfirm(false); refresh() } catch (e) { toast.error((e as Error).message) }
+            }}>New conversation</Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
-    </>
+    </div>
   )
 }

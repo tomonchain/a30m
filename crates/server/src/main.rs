@@ -3,6 +3,7 @@
 //! pinned certificate (decision 158) come before it listens on a network.
 
 mod approvals;
+mod b64;
 mod files;
 mod http;
 mod keys;
@@ -136,6 +137,12 @@ Be brief. Answer in the language the owner writes in.";
 
 pub fn system_prompt(ws: &Workspace) -> String {
     let mut s = SYSTEM.replace("{name}", &ws.info.name);
+    if !ws.info.description.trim().is_empty() {
+        s.push_str(&format!(
+            "\n\nWhat this workspace is for, in the owner's words: {}",
+            ws.info.description.trim()
+        ));
+    }
     s.push_str(&format!(
         "\n\nToday is {} (UTC).",
         date_of(a30m_store::now())

@@ -1,0 +1,62 @@
+import { useEffect, useState } from "react"
+
+const KEY = "a30m-theme"
+const EVENT = "a30m-theme"
+
+// Light or dark, under the key the classic interface used, so an earlier
+// choice holds; the system's choice until the founder picks one.
+function initial(): "light" | "dark" {
+  try {
+    const t = localStorage.getItem(KEY)
+    if (t === "light" || t === "dark") return t
+  } catch { /* private window */ }
+  return matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"
+}
+
+function chosen(): "light" | "dark" | "system" {
+  try {
+    const t = localStorage.getItem(KEY)
+    if (t === "light" || t === "dark") return t
+  } catch { /* private window */ }
+  return "system"
+}
+
+function apply(theme: "light" | "dark") {
+  document.documentElement.classList.toggle("dark", theme === "dark")
+  document.documentElement.dataset.theme = theme
+  // The phone's status bar takes the page's colour.
+  for (const m of document.querySelectorAll('meta[name="theme-color"]')) m.setAttribute("content", theme === "dark" ? "#161617" : "#ffffff")
+}
+
+// Called before React mounts, so the first screen (the welcome guide
+// included) paints in the founder's theme rather than light, then dark.
+export function applyTheme() {
+  apply(initial())
+}
+
+export function useTheme() {
+  const [theme, set] = useState(initial)
+  useEffect(() => apply(theme), [theme])
+  // Every user of the theme follows a change made by any of them.
+  useEffect(() => {
+    const on = () => set(initial())
+    addEventListener(EVENT, on)
+    return () => removeEventListener(EVENT, on)
+  }, [])
+  // Following the system: a change of the Mac's appearance shows at once.
+  useEffect(() => {
+    const m = matchMedia("(prefers-color-scheme: light)")
+    const on = () => { if (chosen() === "system") set(initial()) }
+    m.addEventListener("change", on)
+    return () => m.removeEventListener("change", on)
+  }, [])
+  return {
+    theme,
+    choice: chosen(),
+    setTheme: (t: "light" | "dark" | "system") => {
+      try { if (t === "system") localStorage.removeItem(KEY); else localStorage.setItem(KEY, t) } catch { /* private window */ }
+      set(initial())
+      dispatchEvent(new Event(EVENT))
+    },
+  }
+}

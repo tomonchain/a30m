@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react'
 import { Check, ExternalLink, KeyRound, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { api, type Provider } from '@/lib/api'
-import { Button } from '@/components/ui/button'
-import { Input, NativeSelect } from '@/components/ui/input'
-import { cn } from '@/lib/utils'
 import { preferred } from '@/lib/models'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { cn } from '@/lib/utils'
 
 export function useProviders(slug: string) {
   const [providers, setProviders] = useState<Provider[] | null>(null)
@@ -29,10 +30,10 @@ export function sourceText(p: Provider): string {
 
 const usable = (p: Provider) => p.source !== null
 
-/// Pick a provider, paste its key (a30m tries it first), choose a model.
-export function ConnectModel({ slug, onDone, compact }: { slug: string; onDone?: (model: string) => void; compact?: boolean }) {
+/** Pick a provider, paste its key (a30m tries it first), choose a model. */
+export function ConnectModel({ slug, onDone }: { slug: string; onDone?: (model: string) => void }) {
   const { providers, model, reload } = useProviders(slug)
-  const [chosen, setChosen] = useState<string>('')
+  const [chosen, setChosen] = useState('')
   const [key, setKey] = useState('')
   const [busy, setBusy] = useState(false)
   const [models, setModels] = useState<string[] | null>(null)
@@ -81,48 +82,49 @@ export function ConnectModel({ slug, onDone, compact }: { slug: string; onDone?:
     setBusy(false)
   }
 
-  if (!providers) return <div className="flex items-center gap-2 text-secondary text-text-4"><Loader2 className="size-4 animate-spin" /> Loading…</div>
+  if (!providers) return <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" /> Loading…</div>
   return (
     <div className="space-y-4">
-      <div className={cn('grid gap-2', compact ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2 sm:grid-cols-5')}>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
         {list.map(p => (
           <button key={p.name} type="button" onClick={() => setChosen(p.name)}
-            className={cn('flex cursor-pointer flex-col items-start gap-1 rounded-xl border bg-card px-3 py-2.5 text-left',
-              chosen === p.name ? 'border-text' : 'border-line hover:border-text-5')}>
-            <span className="text-body font-medium text-text">{p.label}</span>
-            <span className={cn('flex items-center gap-1 text-xs2', usable(p) ? 'text-ok' : 'text-text-4')}>
+            className={cn('flex flex-col items-start gap-1 rounded-xl bg-bubble px-3 py-2.5 text-left ring-1 transition-colors',
+              chosen === p.name ? 'ring-foreground/60' : 'ring-transparent hover:ring-foreground/15')}>
+            <span className="text-sm font-medium">{p.label}</span>
+            <span className={cn('flex items-center gap-1 text-xs', usable(p) ? 'text-emerald-500' : 'text-muted-foreground')}>
               {usable(p) && <Check className="size-3.5" />}{sourceText(p)}
             </span>
           </button>
         ))}
       </div>
-      {current && current.needs_key && (
-        <div>
-          <div className="mb-1.5 flex items-center justify-between gap-2 text-secondary text-text-3">
-            <span>{current.source ? `Replace the key for ${current.label}` : `Paste a key for ${current.label}`}</span>
-            <a href={current.key_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-accent hover:text-accent-hover">Get a key <ExternalLink className="size-3.5" /></a>
+      {current?.needs_key && (
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between gap-2 text-sm">
+            <span className="font-medium">{current.source ? `Replace the key for ${current.label}` : `Paste a key for ${current.label}`}</span>
+            <a href={current.key_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-sky-500 hover:underline">Get a key <ExternalLink className="size-3.5" /></a>
           </div>
           <form className="flex gap-2" onSubmit={e => { e.preventDefault(); connect() }}>
             <div className="relative flex-1">
-              <KeyRound className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-text-5" />
-              <Input type="password" autoComplete="off" spellCheck={false} value={key} onChange={e => setKey(e.target.value)} placeholder="Key" className="pl-9 font-mono" />
+              <KeyRound className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input type="password" autoComplete="off" spellCheck={false} value={key} onChange={e => setKey(e.target.value)} placeholder="Key" className="h-9 pl-8 font-mono" />
             </div>
-            <Button type="submit" disabled={busy || !key.trim()}>{busy ? <Loader2 className="animate-spin" /> : null}Connect</Button>
+            <Button type="submit" variant="outline" size="lg" disabled={busy || !key.trim()}>{busy && <Loader2 className="animate-spin" />}Connect</Button>
           </form>
-          <p className="mt-1.5 text-xs2 text-text-5">a30m tries the key before keeping it. It stays on your server, for this workspace only, and is never shown again.</p>
+          <p className="text-xs text-muted-foreground">a30m tries the key before keeping it. It stays on your server, for this workspace only, and is never shown again.</p>
         </div>
       )}
       {current && !current.needs_key && (
-        <p className="text-secondary text-text-4">Ollama runs models on the server itself. {models && !models.length ? 'No model found: install Ollama on the server and pull a model (ollama pull llama3.3).' : ''}</p>
+        <p className="text-sm text-muted-foreground">Ollama runs models on the server itself. {models && !models.length ? 'No model found: install Ollama on the server and pull a model (ollama pull llama3.3).' : ''}</p>
       )}
       {models && models.length > 0 && (
-        <div>
-          <div className="mb-1.5 text-secondary text-text-3">Model</div>
+        <div className="space-y-1.5">
+          <div className="text-sm font-medium">Model</div>
           <div className="flex gap-2">
-            <NativeSelect value={pick} onChange={e => setPick(e.target.value)} className="flex-1">
-              {models.map(m => <option key={m} value={m}>{m}</option>)}
-            </NativeSelect>
-            <Button variant="primary" disabled={busy || !pick} onClick={use}>Use this model</Button>
+            <Select value={pick} onValueChange={v => setPick(String(v))}>
+              <SelectTrigger className="h-9 flex-1"><SelectValue /></SelectTrigger>
+              <SelectContent>{models.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+            </Select>
+            <Button size="lg" disabled={busy || !pick} onClick={use}>Use this model</Button>
           </div>
         </div>
       )}

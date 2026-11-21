@@ -5,6 +5,7 @@
 //!   workspace.json      name, the owner's tool classes      (server only)
 //!   conversation.json   the conversation                     (server only)
 //!   secrets.json        the workspace's keys, mode 600       (server only)
+//!   image.<png|jpg|…>   its logo, for the interface only     (server only)
 //!   conversations/      earlier conversations, by start time (server only)
 //!   agent/              the imported agent: AGENTS.md,       (server only)
 //!                       plugin.json, mcp.json, skills/
@@ -32,6 +33,10 @@ pub struct Home {
 pub struct WorkspaceInfo {
     pub slug: String,
     pub name: String,
+    /// What the workspace is for, in the owner's words. Agents read it in
+    /// every task.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub description: String,
     pub created: u64,
     /// The owner's class for a tool, by its full name: read, reversible
     /// or commits. Wins over what the tool's server says (decision 163).
@@ -70,6 +75,31 @@ pub fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), String> {
     let tmp = path.with_extension("tmp");
     std::fs::write(&tmp, bytes).map_err(|e| format!("{}: {e}", tmp.display()))?;
     std::fs::rename(&tmp, path).map_err(|e| format!("{}: {e}", path.display()))
+}
+
+/// The interface sends logos already reduced to 256×256; this leaves room.
+pub const MAX_IMAGE: usize = 512 * 1024;
+
+const IMAGE_KINDS: [(&str, &str); 4] = [
+    ("png", "image/png"),
+    ("jpg", "image/jpeg"),
+    ("webp", "image/webp"),
+    ("gif", "image/gif"),
+];
+
+fn image_kind(bytes: &[u8]) -> Option<(&'static str, &'static str)> {
+    let i = if bytes.starts_with(b"\x89PNG\r\n\x1a\n") {
+        0
+    } else if bytes.starts_with(&[0xFF, 0xD8, 0xFF]) {
+        1
+    } else if bytes.len() > 12 && &bytes[..4] == b"RIFF" && &bytes[8..12] == b"WEBP" {
+        2
+    } else if bytes.starts_with(b"GIF87a") || bytes.starts_with(b"GIF89a") {
+        3
+    } else {
+        return None;
+    };
+    Some(IMAGE_KINDS[i])
 }
 
 /// Like `write_atomic`, for a file only the server's user may read.
@@ -158,6 +188,7 @@ impl Home {
             slug: slug.clone(),
             name: name.to_string(),
             created: now(),
+            description: String::new(),
             tool_classes: BTreeMap::new(),
             model: None,
         };
@@ -249,6 +280,57 @@ impl Workspace {
         };
         let text = serde_json::to_string_pretty(&all).map_err(|e| e.to_string())?;
         write_private(&self.dir.join("secrets.json"), text.as_bytes())
+    }
+
+    /// Replaces the workspace's logo. Only raster formats recognised by
+    /// their signature are kept: an SVG could carry script, and the type a
+    /// file claims is not trusted. (After Airth v0's `images.rs`.)
+    pub fn save_image(&self, bytes: &[u8]) -> Result<(), String> {
+        if bytes.len() > MAX_IMAGE {
+            return Err(format!(
+                "the picture is too large (at most {} KB)",
+                MAX_IMAGE / 1024
+            ));
+        }
+        let (ext, _) =
+            image_kind(bytes).ok_or("the picture must be a PNG, JPEG, WebP or GIF image")?;
+        self.remove_image()?;
+        write_atomic(&self.dir.join(format!("image.{ext}")), bytes)
+    }
+
+    /// The logo's bytes and media type.
+    pub fn image(&self) -> Option<(Vec<u8>, &'static str)> {
+        let (path, mime) = self.image_path()?;
+        Some((std::fs::read(path).ok()?, mime))
+    }
+
+    /// Removes the logo; false if there was none.
+    pub fn remove_image(&self) -> Result<bool, String> {
+        let mut removed = false;
+        while let Some((path, _)) = self.image_path() {
+            std::fs::remove_file(&path).map_err(|e| e.to_string())?;
+            removed = true;
+        }
+        Ok(removed)
+    }
+
+    /// Changes when the logo does, for the interface's cache.
+    pub fn image_version(&self) -> Option<u64> {
+        let (path, _) = self.image_path()?;
+        let modified = std::fs::metadata(path).ok()?.modified().ok()?;
+        Some(
+            modified
+                .duration_since(std::time::UNIX_EPOCH)
+                .ok()?
+                .as_millis() as u64,
+        )
+    }
+
+    fn image_path(&self) -> Option<(PathBuf, &'static str)> {
+        IMAGE_KINDS.iter().find_map(|(ext, mime)| {
+            let path = self.dir.join(format!("image.{ext}"));
+            path.is_file().then_some((path, *mime))
+        })
     }
 
     /// The owner's instructions for the workspace's agent. Written only
@@ -543,6 +625,31 @@ mod tests {
             None,
             "one workspace's keys never serve another"
         );
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn a_logo_is_one_raster_picture() {
+        let dir = temp("logo");
+        let home = Home::open(&dir).unwrap();
+        let ws = home.create("a").unwrap();
+        let png = b"\x89PNG\r\n\x1a\nrest".to_vec();
+        let jpg = vec![0xFF, 0xD8, 0xFF, 0xE0, 1, 2];
+        assert!(ws.image_version().is_none());
+        ws.save_image(&png).unwrap();
+        assert_eq!(ws.image().unwrap(), (png, "image/png"));
+        ws.save_image(&jpg).unwrap();
+        assert_eq!(ws.image().unwrap().1, "image/jpeg");
+        assert!(
+            !ws.dir.join("image.png").exists(),
+            "another format replaces it"
+        );
+        assert!(ws.save_image(b"<svg onload=\"alert(1)\"/>").is_err());
+        assert!(ws.save_image(&vec![0xFF; MAX_IMAGE + 1]).is_err());
+        assert_eq!(ws.image().unwrap().1, "image/jpeg");
+        assert!(ws.remove_image().unwrap());
+        assert!(!ws.remove_image().unwrap());
+        assert!(ws.image().is_none());
         std::fs::remove_dir_all(dir).unwrap();
     }
 

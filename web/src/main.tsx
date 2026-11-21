@@ -1,12 +1,16 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Toaster } from 'sonner'
+import { Toaster } from '@/components/ui/sonner'
+import { applyTheme } from '@/hooks/use-theme'
 import App from './App'
-import './styles.css'
+import './index.css'
+
+// Before the first paint: the owner's theme, or the system's.
+applyTheme()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
-    <Toaster position="bottom-right" theme="system" toastOptions={{ style: { background: 'var(--card)', border: '1px solid var(--line)', color: 'var(--text)' } }} />
+    <Toaster position="bottom-right" />
   </StrictMode>,
 )
