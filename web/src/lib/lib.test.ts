@@ -38,3 +38,14 @@ describe('colour', () => {
     expect(initials('  ')).toBe('?')
   })
 })
+
+import { preferred } from './models'
+describe('preferred model', () => {
+  it('keeps the model in use, else picks a sensible one', () => {
+    expect(preferred('openai', ['gpt-5', 'gpt-6.1-sol'], 'openai/gpt-5')).toBe('gpt-5')
+    expect(preferred('openai', ['gpt-5', 'gpt-6.1-sol', 'o4'], 'anthropic/x')).toBe('gpt-6.1-sol')
+    expect(preferred('anthropic', ['claude-haiku-5-5', 'claude-sonnet-5-5'], '')).toBe('claude-sonnet-5-5')
+    expect(preferred('ollama', ['llama3.3'], '')).toBe('llama3.3')
+    expect(preferred('xai', [], '')).toBe('')
+  })
+})

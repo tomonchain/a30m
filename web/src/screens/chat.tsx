@@ -14,7 +14,13 @@ import { Column, Empty, PageHead, Pill, Scroll } from '@/components/page'
 
 type Result = Extract<Block, { type: 'tool_result' }>
 
-export function Chat({ slug, name, state, refresh }: { slug: string; name: string; state: WorkspaceState; refresh: () => void }) {
+const SUGGESTIONS = [
+  'Plan a weekend for two in Lisbon and write it in a file',
+  'Read a web page and summarise it in five points',
+  'Draft a polite email declining a meeting',
+]
+
+export function Chat({ slug, name, state, refresh, onSettings }: { slug: string; name: string; state: WorkspaceState; refresh: () => void; onSettings: () => void }) {
   const [text, setText] = useState('')
   const [confirm, setConfirm] = useState(false)
   const scroller = useRef<HTMLDivElement>(null)
@@ -94,7 +100,20 @@ export function Chat({ slug, name, state, refresh }: { slug: string; name: strin
       </>} />
       <Scroll ref={scroller} onScroll={onScroll}>
         <Column>
-          {!state.messages.length && <Empty title="What should a30m do here?">Ask in plain words. Anything that sends, pays, publishes or reaches outside waits for you.</Empty>}
+          {!state.model_ready && (
+            <div className="my-4 flex items-center gap-3 rounded-2xl border border-warn bg-warn-bg px-4 py-3">
+              <span className="flex-1 text-text">No model is connected to this workspace yet.</span>
+              <Button variant="primary" onClick={onSettings}>Connect a model</Button>
+            </div>
+          )}
+          {!state.messages.length && (
+            <Empty title="What should a30m do here?">
+              Ask in plain words. Anything that sends, pays, publishes or reaches outside waits for you.
+              <div className="mt-5 flex flex-wrap justify-center gap-2">
+                {SUGGESTIONS.map(s => <button key={s} type="button" onClick={() => { setText(s); document.getElementById('ask')?.focus() }} className="cursor-pointer rounded-full border border-line bg-card px-3 py-1.5 text-secondary text-text-2 hover:border-text-5">{s}</button>)}
+              </div>
+            </Empty>
+          )}
           {rows}
           {state.waiting.map(a => <ApprovalCard key={a.id} a={a} onDone={refresh} />)}
           {state.running && !state.waiting.length && (
@@ -105,7 +124,7 @@ export function Chat({ slug, name, state, refresh }: { slug: string; name: strin
       </Scroll>
       <form className="px-8 pt-3 pb-5 max-[720px]:px-3 max-[720px]:pt-2 max-[720px]:pb-[max(12px,env(safe-area-inset-bottom))]" onSubmit={e => { e.preventDefault(); send() }}>
         <Column className="flex items-end gap-2 rounded-[14px] border border-line bg-card py-1.5 pr-1.5 pl-1">
-          <Textarea rows={1} value={text} placeholder="Ask a30m…" className="max-h-[200px] border-0 bg-transparent field-sizing-content"
+          <Textarea id="ask" rows={1} value={text} placeholder="Ask a30m…" className="max-h-[200px] border-0 bg-transparent field-sizing-content"
             onChange={e => setText(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); send() } }} />
           <Button variant="primary" type="submit" disabled={state.running || !text.trim()}>Send</Button>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { api, hasToken, store, type Info, type WorkspaceState, type WorkspaceSummary } from '@/lib/api'
+import { api, hasToken, store, type WorkspaceState, type WorkspaceSummary } from '@/lib/api'
 import { Menu, PAGES, SpacesBar, type Page } from '@/components/shell'
 import { Empty } from '@/components/page'
 import { Button } from '@/components/ui/button'
@@ -11,6 +11,8 @@ import { NeedsYou } from '@/screens/needs'
 import { Agent } from '@/screens/agent'
 import { Soon, SOON_TEXT } from '@/screens/soon'
 import { Files } from '@/screens/files'
+import { Models } from '@/screens/models'
+import { Onboarding } from '@/screens/onboarding'
 
 const isPage = (p: string | null): p is Page => PAGES.some(x => x.id === p)
 
@@ -19,10 +21,13 @@ export default function App() {
   const [current, setCurrent] = useState(store.get('a30m-ws') || '')
   const [page, setPage] = useState<Page>(() => { const p = store.get('a30m-page'); return isPage(p) ? p : 'chat' })
   const [state, setState] = useState<WorkspaceState | null>(null)
-  const [info, setInfo] = useState<Info | null>(null)
   const [down, setDown] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
   const [newName, setNewName] = useState('')
+  const [onboard, setOnboard] = useState<{ slug: string; name: string } | null>(null)
+  // The first visit's onboarding stays until it ends, even once its
+  // workspace exists.
+  const [firstRun, setFirstRun] = useState(false)
   const [theme, setTheme] = useState<'dark' | 'light'>(document.documentElement.dataset.theme === 'light' ? 'light' : 'dark')
   const timer = useRef<number>(undefined)
   const currentRef = useRef(current)
@@ -34,6 +39,7 @@ export default function App() {
     try {
       const { workspaces } = await api<{ workspaces: WorkspaceSummary[] }>('workspaces')
       setList(workspaces)
+      if (!workspaces.length) setFirstRun(true)
       let slug = currentRef.current
       if (!workspaces.some(w => w.slug === slug)) {
         slug = workspaces[0]?.slug ?? ''
@@ -55,7 +61,6 @@ export default function App() {
   useEffect(() => {
     if (!hasToken) return
     refresh()
-    api<Info>('info').then(setInfo).catch(() => {})
     return () => window.clearTimeout(timer.current)
   }, [refresh])
 
@@ -73,7 +78,7 @@ export default function App() {
     if (!name) return
     try {
       const r = await api<{ slug: string }>('workspaces', { name })
-      setAdding(false); setNewName(''); go('chat'); pick(r.slug)
+      setAdding(false); setNewName(''); go('chat'); pick(r.slug); setOnboard({ slug: r.slug, name })
     } catch (e) { toast.error((e as Error).message) }
   }
 
@@ -81,12 +86,19 @@ export default function App() {
   let body: React.ReactNode
   if (!hasToken) body = <Empty title="Open a30m from the server">Open the address the server printed when it started; it ends with #t=…</Empty>
   else if (down) body = <Empty title="Cannot reach the server">{down}</Empty>
-  else if (!list.length) body = <Empty title="No workspace yet" action={<Button variant="primary" onClick={() => setAdding(true)}>New workspace</Button>}>A workspace keeps its own agent, files, connections and conversations, apart from the others.</Empty>
+  else if (firstRun) return (
+    <div className="flex h-dvh">
+      <Onboarding onFinish={slug => { setFirstRun(false); go('chat'); pick(slug) }} />
+    </div>
+  )
+  else if (!list.length) body = null
+  else if (onboard && onboard.slug === current) body = <Onboarding key={onboard.slug} start={onboard} onFinish={() => { setOnboard(null); go('chat'); refresh() }} />
   else if (!ws || !state) body = null
-  else if (page === 'chat') body = <Chat key={ws.slug} slug={ws.slug} name={ws.name} state={state} refresh={refresh} />
+  else if (page === 'chat') body = <Chat key={ws.slug} slug={ws.slug} name={ws.name} state={state} refresh={refresh} onSettings={() => go('models')} />
   else if (page === 'needs') body = <NeedsYou name={ws.name} state={state} refresh={refresh} />
   else if (page === 'files') body = <Files key={ws.slug} slug={ws.slug} name={ws.name} tick={state.messages.length} />
-  else if (page === 'agent') body = <Agent key={ws.slug} slug={ws.slug} name={ws.name} state={state} info={info} refresh={refresh} />
+  else if (page === 'models') body = <Models key={ws.slug} slug={ws.slug} name={ws.name} refresh={refresh} />
+  else if (page === 'agent') body = <Agent key={ws.slug} slug={ws.slug} name={ws.name} state={state} refresh={refresh} />
   else { const p = PAGES.find(x => x.id === page)!; body = <Soon name={ws.name} title={p.label} icon={p.icon} what={SOON_TEXT[page]} /> }
 
   return (

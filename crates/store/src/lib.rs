@@ -4,6 +4,7 @@
 //! <home>/workspaces/<slug>/
 //!   workspace.json      name, the owner's tool classes      (server only)
 //!   conversation.json   the conversation                     (server only)
+//!   secrets.json        the workspace's keys, mode 600       (server only)
 //!   conversations/      earlier conversations, by start time (server only)
 //!   agent/              the imported agent: AGENTS.md,       (server only)
 //!                       plugin.json, mcp.json, skills/
@@ -68,6 +69,27 @@ pub fn now() -> u64 {
 pub fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), String> {
     let tmp = path.with_extension("tmp");
     std::fs::write(&tmp, bytes).map_err(|e| format!("{}: {e}", tmp.display()))?;
+    std::fs::rename(&tmp, path).map_err(|e| format!("{}: {e}", path.display()))
+}
+
+/// Like `write_atomic`, for a file only the server's user may read.
+fn write_private(path: &Path, bytes: &[u8]) -> Result<(), String> {
+    use std::io::Write;
+    let tmp = path.with_extension("tmp");
+    let _ = std::fs::remove_file(&tmp);
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut file = options
+        .open(&tmp)
+        .map_err(|e| format!("{}: {e}", tmp.display()))?;
+    file.write_all(bytes)
+        .and_then(|()| file.sync_all())
+        .map_err(|e| format!("{}: {e}", tmp.display()))?;
     std::fs::rename(&tmp, path).map_err(|e| format!("{}: {e}", path.display()))
 }
 
@@ -203,6 +225,30 @@ impl Workspace {
             n += 1;
         }
         std::fs::rename(&current, &name).map_err(|e| e.to_string())
+    }
+
+    fn secrets(&self) -> BTreeMap<String, String> {
+        std::fs::read_to_string(self.dir.join("secrets.json"))
+            .ok()
+            .and_then(|t| serde_json::from_str(&t).ok())
+            .unwrap_or_default()
+    }
+
+    /// A key the owner gave this workspace (decision 167). Only the
+    /// server reads it: agents' tools reach `files/` alone.
+    pub fn secret(&self, name: &str) -> Option<String> {
+        self.secrets().remove(name).filter(|k| !k.is_empty())
+    }
+
+    /// Sets or, with `None`, removes a key.
+    pub fn set_secret(&self, name: &str, value: Option<&str>) -> Result<(), String> {
+        let mut all = self.secrets();
+        match value {
+            Some(v) => all.insert(name.to_string(), v.to_string()),
+            None => all.remove(name),
+        };
+        let text = serde_json::to_string_pretty(&all).map_err(|e| e.to_string())?;
+        write_private(&self.dir.join("secrets.json"), text.as_bytes())
     }
 
     /// The owner's instructions for the workspace's agent. Written only
@@ -465,6 +511,38 @@ mod tests {
             .unwrap()
             .count();
         assert_eq!(kept, 2);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn keys_are_kept_for_the_server_alone() {
+        let dir = temp("keys");
+        let home = Home::open(&dir).unwrap();
+        let ws = home.create("a").unwrap();
+        assert_eq!(ws.secret("openai"), None);
+        ws.set_secret("openai", Some("sk-1")).unwrap();
+        ws.set_secret("xai", Some("xk-2")).unwrap();
+        assert_eq!(ws.secret("openai").as_deref(), Some("sk-1"));
+        ws.set_secret("openai", None).unwrap();
+        assert_eq!(ws.secret("openai"), None);
+        assert_eq!(ws.secret("xai").as_deref(), Some("xk-2"));
+        let info = std::fs::read_to_string(ws.dir.join("workspace.json")).unwrap();
+        assert!(!info.contains("xk-2"), "keys stay out of workspace.json");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = std::fs::metadata(ws.dir.join("secrets.json"))
+                .unwrap()
+                .permissions()
+                .mode();
+            assert_eq!(mode & 0o777, 0o600);
+        }
+        let other = home.create("b").unwrap();
+        assert_eq!(
+            other.secret("xai"),
+            None,
+            "one workspace's keys never serve another"
+        );
         std::fs::remove_dir_all(dir).unwrap();
     }
 

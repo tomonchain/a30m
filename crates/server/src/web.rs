@@ -18,7 +18,12 @@ const MAX_BYTES: u64 = 2 * 1024 * 1024;
 const MAX_TEXT: usize = 60_000;
 const MAX_REDIRECTS: usize = 5;
 
-/// The search key, when the owner has set one.
+/// The search key: the workspace's, else the server's (decision 167).
+pub fn search_key_for(ws: &a30m_store::Workspace) -> Option<String> {
+    ws.secret("brave").or_else(search_key)
+}
+
+/// The search key from the server's environment.
 pub fn search_key() -> Option<String> {
     std::env::var(SEARCH_KEY_VAR)
         .ok()
@@ -36,8 +41,10 @@ fn agent() -> ureq::Agent {
         .into()
 }
 
-pub fn search(query: &str, count: u64) -> Result<String, String> {
-    let key = search_key().ok_or(format!("web search needs {SEARCH_KEY_VAR}"))?;
+pub fn search(query: &str, count: u64, key: Option<String>) -> Result<String, String> {
+    let key = key.ok_or(format!(
+        "web search needs a Brave Search key: add one in this workspace's Settings, or set {SEARCH_KEY_VAR}"
+    ))?;
     let query = query.trim();
     if query.is_empty() || query.len() > 400 {
         return Err("the query must be 1 to 400 characters".into());

@@ -1,19 +1,14 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { api, type Info, type WorkspaceState } from '@/lib/api'
+import { api, type WorkspaceState } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input, NativeSelect, Textarea } from '@/components/ui/input'
 import { Card, CardDescription, CardTitle, Chip } from '@/components/ui/card'
 import { Column, PageHead, Scroll } from '@/components/page'
 import { cn } from '@/lib/utils'
 
-const MODELS = [
-  'anthropic/claude-sonnet-5-5', 'anthropic/claude-opus-5-5', 'openai/gpt-6.1-sol', 'xai/grok-4.7',
-  'gemini/gemini-pro-latest', 'gemini/gemini-flash-latest', 'ollama/llama3.3', 'echo', 'default',
-]
 
-export function Agent({ slug, name, state, info, refresh }: { slug: string; name: string; state: WorkspaceState; info: Info | null; refresh: () => void }) {
-  const [model, setModel] = useState('')
+export function Agent({ slug, name, state, refresh }: { slug: string; name: string; state: WorkspaceState; refresh: () => void }) {
   const [path, setPath] = useState('')
   const [tool, setTool] = useState('')
   const [cls, setCls] = useState('read')
@@ -22,7 +17,6 @@ export function Agent({ slug, name, state, info, refresh }: { slug: string; name
   useEffect(() => {
     api<{ text: string }>(`workspaces/${slug}/instructions`).then(r => { setInstructions(r.text); setSaved(r.text) }).catch(() => {})
   }, [slug])
-  const ready = info?.providers.filter(p => p.ready).map(p => p.name) ?? []
   const run = async (what: () => Promise<string>) => {
     try { toast.success(await what()); refresh() } catch (e) { toast.error((e as Error).message) }
   }
@@ -32,18 +26,9 @@ export function Agent({ slug, name, state, info, refresh }: { slug: string; name
 
   return (
     <>
-      <PageHead label={name} title="Agent" summary="How this workspace's agent works: its model, its skills and the services it may use." />
+      <PageHead label={name} title="Agent" summary="How this workspace's agent works: its instructions, its skills and the services it may use." />
       <Scroll>
         <Column className="space-y-3 py-4">
-          <Card>
-            <CardTitle>Model</CardTitle>
-            <CardDescription>{state.model}{state.workspace.model ? '' : " · the server's default"}. Keys set on the server: {ready.join(', ') || 'none'}.</CardDescription>
-            <form className="flex gap-2" onSubmit={e => { e.preventDefault(); run(async () => { const r = await api<{ model: string }>(`workspaces/${slug}/model`, { model: model.trim() }); setModel(''); return `This workspace now uses ${r.model}.` }) }}>
-              <Input list="models" value={model} onChange={e => setModel(e.target.value)} placeholder="provider/model, e.g. openai/gpt-6.1-sol" />
-              <datalist id="models">{MODELS.map(m => <option key={m} value={m} />)}</datalist>
-              <Button type="submit">Use</Button>
-            </form>
-          </Card>
           <Card>
             <CardTitle>Instructions</CardTitle>
             <CardDescription>What the agent should know about this workspace: what it is for, its tone, its red lines. Agents read this; they cannot change it.</CardDescription>

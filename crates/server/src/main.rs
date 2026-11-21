@@ -5,6 +5,7 @@
 mod approvals;
 mod files;
 mod http;
+mod keys;
 mod tools;
 mod web;
 
@@ -180,6 +181,16 @@ pub fn date_of(seconds: u64) -> String {
     format!("{year:04}-{month:02}-{day:02}, {weekday}")
 }
 
+/// The workspace's model, with the workspace's key for its provider when
+/// it has one, else the server's (decision 167).
+pub fn connect_for(app: &App, ws: &Workspace) -> Result<Box<dyn a30m_core::Model>, String> {
+    let spec = model_of(app, ws);
+    let key = a30m_models::parse_spec(spec)
+        .ok()
+        .and_then(|(p, _)| ws.secret(p.name));
+    a30m_models::connect_with(spec, key)
+}
+
 /// The workspace's model, or the server's default.
 pub fn model_of<'a>(app: &'a App, ws: &'a Workspace) -> &'a str {
     ws.info.model.as_deref().unwrap_or(&app.default_model)
@@ -190,7 +201,7 @@ pub fn start_turn(app: &Arc<App>, slug: &str, text: &str) -> Result<(), String> 
     let ws = app.home.workspace(slug)?;
     // Checked before the message is kept, so a missing key is said at once
     // and the conversation is not left waiting for an answer.
-    a30m_models::connect(model_of(app, &ws))?;
+    connect_for(app, &ws)?;
     {
         let mut running = app.running.lock().map_err(|_| "busy")?;
         if !running.insert(slug.to_string()) {
@@ -261,7 +272,7 @@ fn turn(app: &Arc<App>, ws: &Workspace, messages: &mut Vec<Message>) -> Result<(
         approvals: &app.approvals,
         workspace: ws.info.slug.clone(),
     };
-    let model = a30m_models::connect(model_of(app, ws))?;
+    let model = connect_for(app, ws)?;
     let system = system_prompt(ws);
     let run = Run {
         model: model.as_ref(),
