@@ -14,7 +14,8 @@ use std::io::Read;
 use std::sync::Arc;
 use tiny_http::{Header, Method, Request, Response, Server};
 
-const UI: &str = include_str!("../ui/index.html");
+// The interface, built from web/ into one file (decision 157).
+const UI: &str = include_str!("../../../web/dist/index.html");
 const MAX_BODY: u64 = 1024 * 1024;
 
 pub fn random_token() -> Result<String, String> {
