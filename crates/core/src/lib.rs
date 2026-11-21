@@ -103,7 +103,12 @@ pub struct Run<'a> {
     pub system: &'a str,
     /// The most model calls one turn may make.
     pub max_steps: usize,
+    /// True once the owner has stopped the agent. Checked before each
+    /// model call and each tool call; a call already running finishes.
+    pub stop: &'a dyn Fn() -> bool,
 }
+
+pub const STOPPED: &str = "stopped by the owner";
 
 /// Runs the agent until it answers without calling a tool. `changed` is
 /// called after each step, so the conversation can be saved and shown.
@@ -114,6 +119,9 @@ pub fn run(
 ) -> Result<(), String> {
     let specs = r.tools.specs();
     for _ in 0..r.max_steps {
+        if (r.stop)() {
+            return Err(STOPPED.into());
+        }
         let reply = r.model.reply(&ModelRequest {
             system: r.system,
             messages,
@@ -138,10 +146,16 @@ pub fn run(
             return Ok(());
         }
         let mut results = Vec::new();
+        let mut stopped = false;
         for (id, name, input) in calls {
-            let (content, is_error) = match gated_call(r, &name, &input) {
-                Ok(out) => (out, false),
-                Err(err) => (err, true),
+            stopped = stopped || (r.stop)();
+            let (content, is_error) = if stopped {
+                ("Not run: the owner stopped the agent.".to_string(), true)
+            } else {
+                match gated_call(r, &name, &input) {
+                    Ok(out) => (out, false),
+                    Err(err) => (err, true),
+                }
             };
             results.push(Block::ToolResult {
                 tool_use_id: id,
@@ -154,6 +168,9 @@ pub fn run(
             content: results,
         });
         changed(messages);
+        if stopped {
+            return Err(STOPPED.into());
+        }
     }
     Err(format!("stopped after {} steps", r.max_steps))
 }
@@ -256,6 +273,7 @@ mod tests {
                 approver: &owner,
                 system: "",
                 max_steps: 5,
+                stop: &|| false,
             },
             &mut messages,
             &mut |_| {},
@@ -290,6 +308,37 @@ mod tests {
     }
 
     #[test]
+    fn a_stopped_agent_runs_nothing_more_and_closes_its_calls() {
+        let model = Script(Mutex::new(vec![
+            vec![call("1", "read"), call("2", "write")],
+            vec![text("never")],
+        ]));
+        let tools = Recorder::default();
+        let owner = Owner(Verdict::Approved, RefCell::new(0));
+        let mut messages = vec![Message::user_text("go")];
+        // Stops once the first tool has run.
+        let out = run(
+            &Run {
+                model: &model,
+                tools: &tools,
+                approver: &owner,
+                system: "",
+                max_steps: 5,
+                stop: &|| !tools.0.borrow().is_empty(),
+            },
+            &mut messages,
+            &mut |_| {},
+        );
+        assert_eq!(out, Err(STOPPED.to_string()));
+        assert_eq!(*tools.0.borrow(), vec!["read"]);
+        assert_eq!(messages.len(), 3, "no model call after the stop");
+        assert!(matches!(
+            &messages[2].content[1],
+            Block::ToolResult { tool_use_id, is_error: true, .. } if tool_use_id == "2"
+        ));
+    }
+
+    #[test]
     fn a_loop_that_never_ends_is_stopped() {
         let model = Script(Mutex::new(vec![vec![call("1", "read")]; 10]));
         let tools = Recorder::default();
@@ -302,6 +351,7 @@ mod tests {
                 approver: &owner,
                 system: "",
                 max_steps: 3,
+                stop: &|| false,
             },
             &mut messages,
             &mut |_| {},

@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react'
-import { MessageSquarePlus, Sparkles } from 'lucide-react'
+import { MessageSquarePlus, Sparkles, Square } from 'lucide-react'
 import { toast } from 'sonner'
 import { api, type Block, type WorkspaceState } from '@/lib/api'
 import { says } from '@/lib/says'
@@ -82,11 +82,16 @@ export function Chat({ slug, name, state, refresh }: { slug: string; name: strin
 
   return (
     <>
-      <PageHead label={name} title="Chat" summary={status} actions={
+      <PageHead label={name} title="Chat" summary={status} actions={<>
+        {state.running && (
+          <Button variant="danger" title="Stop the agent: what waits for you is refused, nothing more runs" onClick={async () => {
+            try { await api(`workspaces/${slug}/stop`, {}); toast('Stopping the agent.'); refresh() } catch (e) { toast.error((e as Error).message) }
+          }}><Square /><span className="max-[720px]:hidden">Stop</span></Button>
+        )}
         <Button variant="ghost" disabled={state.running || !state.messages.length} onClick={() => setConfirm(true)} title="Start a new conversation; this one is kept">
           <MessageSquarePlus /><span className="max-[720px]:hidden">New conversation</span>
         </Button>
-      } />
+      </>} />
       <Scroll ref={scroller} onScroll={onScroll}>
         <Column>
           {!state.messages.length && <Empty title="What should a30m do here?">Ask in plain words. Anything that sends, pays, publishes or reaches outside waits for you.</Empty>}

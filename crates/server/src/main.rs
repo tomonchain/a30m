@@ -3,6 +3,7 @@
 //! pinned certificate (decision 158) come before it listens on a network.
 
 mod approvals;
+mod files;
 mod http;
 mod tools;
 mod web;
@@ -27,6 +28,8 @@ pub struct App {
     pub mcp: Mutex<BTreeMap<String, Arc<Mutex<tools::McpHost>>>>,
     /// The last error per workspace, shown until the next message.
     pub errors: Mutex<BTreeMap<String, String>>,
+    /// Workspaces whose agent the owner stopped, until its next message.
+    pub stops: Mutex<HashSet<String>>,
 }
 
 const USAGE: &str = "usage: a30m-server --home <folder> [--port 7330] [--model provider/model]
@@ -114,6 +117,7 @@ fn main() {
         running: Mutex::new(HashSet::new()),
         mcp: Mutex::new(BTreeMap::new()),
         errors: Mutex::new(BTreeMap::new()),
+        stops: Mutex::new(HashSet::new()),
     });
     if let Err(e) = http::serve(app, port) {
         eprintln!("a30m-server: {e}");
@@ -202,11 +206,15 @@ pub fn start_turn(app: &Arc<App>, slug: &str, text: &str) -> Result<(), String> 
     if let Ok(mut errors) = app.errors.lock() {
         errors.remove(slug);
     }
+    if let Ok(mut stops) = app.stops.lock() {
+        stops.remove(slug);
+    }
     let app = Arc::clone(app);
     let slug = slug.to_string();
     std::thread::spawn(move || {
         let outcome = turn(&app, &ws, &mut messages);
         if let Err(e) = outcome
+            && e != a30m_core::STOPPED
             && let Ok(mut errors) = app.errors.lock()
         {
             errors.insert(slug.clone(), e);
@@ -261,6 +269,12 @@ fn turn(app: &Arc<App>, ws: &Workspace, messages: &mut Vec<Message>) -> Result<(
         approver: &approver,
         system: &system,
         max_steps: 40,
+        stop: &|| {
+            app.stops
+                .lock()
+                .map(|s| s.contains(&ws.info.slug))
+                .unwrap_or(true)
+        },
     };
     let result = a30m_core::run(&run, messages, &mut |m| {
         let _ = ws.save_conversation(m);

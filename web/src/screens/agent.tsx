@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { api, type Info, type WorkspaceState } from '@/lib/api'
 import { Button } from '@/components/ui/button'
-import { Input, NativeSelect } from '@/components/ui/input'
+import { Input, NativeSelect, Textarea } from '@/components/ui/input'
 import { Card, CardDescription, CardTitle, Chip } from '@/components/ui/card'
 import { Column, PageHead, Scroll } from '@/components/page'
 import { cn } from '@/lib/utils'
@@ -17,6 +17,11 @@ export function Agent({ slug, name, state, info, refresh }: { slug: string; name
   const [path, setPath] = useState('')
   const [tool, setTool] = useState('')
   const [cls, setCls] = useState('read')
+  const [instructions, setInstructions] = useState<string | null>(null)
+  const [saved, setSaved] = useState<string | null>(null)
+  useEffect(() => {
+    api<{ text: string }>(`workspaces/${slug}/instructions`).then(r => { setInstructions(r.text); setSaved(r.text) }).catch(() => {})
+  }, [slug])
   const ready = info?.providers.filter(p => p.ready).map(p => p.name) ?? []
   const run = async (what: () => Promise<string>) => {
     try { toast.success(await what()); refresh() } catch (e) { toast.error((e as Error).message) }
@@ -38,6 +43,16 @@ export function Agent({ slug, name, state, info, refresh }: { slug: string; name
               <datalist id="models">{MODELS.map(m => <option key={m} value={m} />)}</datalist>
               <Button type="submit">Use</Button>
             </form>
+          </Card>
+          <Card>
+            <CardTitle>Instructions</CardTitle>
+            <CardDescription>What the agent should know about this workspace: what it is for, its tone, its red lines. Agents read this; they cannot change it.</CardDescription>
+            <Textarea rows={8} value={instructions ?? ''} disabled={instructions === null} onChange={e => setInstructions(e.target.value)} className="font-mono text-secondary" />
+            <div className="mt-2 flex justify-end">
+              <Button disabled={instructions === null || instructions === saved} onClick={() => run(async () => {
+                await api(`workspaces/${slug}/instructions`, { text: instructions ?? '' }); setSaved(instructions); return 'Instructions saved. They apply from the next message.'
+              })}>Save instructions</Button>
+            </div>
           </Card>
           <Card>
             <CardTitle>Skills</CardTitle>
@@ -75,7 +90,6 @@ export function Agent({ slug, name, state, info, refresh }: { slug: string; name
               <Button type="submit">Save</Button>
             </form>
           </Card>
-          <p className="text-secondary text-text-4">The agent's instructions are in this workspace's <span className="font-mono">agent/AGENTS.md</span>, on the server. Agents cannot change them.</p>
         </Column>
       </Scroll>
     </>
