@@ -10,7 +10,7 @@ export const PAGES: { id: Page; label: string; icon: LucideIcon; soon?: boolean;
   { id: 'needs', label: 'Needs you', icon: Bell, group: 'top' },
   { id: 'team', label: 'Team', icon: Users, soon: true, group: 'work' },
   { id: 'routines', label: 'Routines', icon: Repeat, soon: true, group: 'work' },
-  { id: 'files', label: 'Files', icon: Folder, soon: true, group: 'work' },
+  { id: 'files', label: 'Files', icon: Folder, group: 'work' },
   { id: 'agent', label: 'Agent', icon: Bot, group: 'settings' },
 ]
 

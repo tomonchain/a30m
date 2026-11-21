@@ -205,6 +205,13 @@ impl Workspace {
         std::fs::rename(&current, &name).map_err(|e| e.to_string())
     }
 
+    /// The owner's instructions for the workspace's agent. Written only
+    /// through the owner's interface: agents' tools cannot reach `agent/`.
+    pub fn set_agents_md(&self, text: &str) -> Result<(), String> {
+        std::fs::create_dir_all(self.agent_dir()).map_err(|e| e.to_string())?;
+        write_atomic(&self.agent_dir().join("AGENTS.md"), text.as_bytes())
+    }
+
     pub fn agents_md(&self) -> String {
         std::fs::read_to_string(self.agent_dir().join("AGENTS.md")).unwrap_or_default()
     }
@@ -458,6 +465,17 @@ mod tests {
             .unwrap()
             .count();
         assert_eq!(kept, 2);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn the_owners_instructions_are_kept() {
+        let dir = temp("instr");
+        let home = Home::open(&dir).unwrap();
+        let ws = home.create("a").unwrap();
+        assert!(ws.agents_md().starts_with("# Instructions"));
+        ws.set_agents_md("Answer in French.").unwrap();
+        assert_eq!(ws.agents_md(), "Answer in French.");
         std::fs::remove_dir_all(dir).unwrap();
     }
 

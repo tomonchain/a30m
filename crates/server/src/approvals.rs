@@ -60,6 +60,26 @@ impl Approvals {
         true
     }
 
+    /// Refuses everything that waits in a workspace: the owner stopped its
+    /// agent. Returns how many were refused.
+    pub fn refuse_all(&self, workspace: &str, reason: &str) -> usize {
+        let Ok(mut state) = self.state.lock() else {
+            return 0;
+        };
+        let ids: Vec<u64> = state
+            .pending
+            .iter()
+            .filter(|p| p.workspace == workspace)
+            .map(|p| p.id)
+            .collect();
+        state.pending.retain(|p| p.workspace != workspace);
+        for id in &ids {
+            state.verdicts.push((*id, Verdict::Refused(reason.into())));
+        }
+        self.answered.notify_all();
+        ids.len()
+    }
+
     fn wait(&self, workspace: &str, tool: &str, input: &Value, class: Class) -> Verdict {
         let Ok(mut state) = self.state.lock() else {
             return Verdict::Refused("the server could not ask".into());

@@ -297,6 +297,38 @@ fn route(app: &Arc<App>, method: &Method, parts: &[&str], body: &Value) -> Answe
             }
             Ok(json!({"ok": true}))
         }
+        (Method::Post, ["workspaces", slug, "files"]) => {
+            let ws = app.home.workspace(slug).map_err(|e| (404, e))?;
+            let rel = body.get("path").and_then(Value::as_str).unwrap_or("");
+            crate::files::list(&ws, rel).map_err(bad)
+        }
+        (Method::Post, ["workspaces", slug, "file"]) => {
+            let ws = app.home.workspace(slug).map_err(|e| (404, e))?;
+            crate::files::read(&ws, text_of(body, "path")?).map_err(bad)
+        }
+        (Method::Get, ["workspaces", slug, "instructions"]) => {
+            let ws = app.home.workspace(slug).map_err(|e| (404, e))?;
+            Ok(json!({"text": ws.agents_md()}))
+        }
+        (Method::Post, ["workspaces", slug, "instructions"]) => {
+            let ws = app.home.workspace(slug).map_err(|e| (404, e))?;
+            let text = text_of(body, "text")?;
+            if text.len() > 64 * 1024 {
+                return Err(bad("instructions are limited to 64 KB"));
+            }
+            ws.set_agents_md(text).map_err(|e| (500, e))?;
+            Ok(json!({"ok": true}))
+        }
+        (Method::Post, ["workspaces", slug, "stop"]) => {
+            let ws = app.home.workspace(slug).map_err(|e| (404, e))?;
+            if let Ok(mut stops) = app.stops.lock() {
+                stops.insert(ws.info.slug.clone());
+            }
+            let refused = app
+                .approvals
+                .refuse_all(&ws.info.slug, "The owner stopped the agent.");
+            Ok(json!({"refused": refused}))
+        }
         (Method::Get, ["approvals"]) => Ok(json!({"waiting": app.approvals.pending(None)})),
         (Method::Post, ["approvals", id]) => {
             let id: u64 = id.parse().map_err(|_| bad("bad id"))?;

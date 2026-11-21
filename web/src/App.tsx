@@ -10,6 +10,7 @@ import { Chat } from '@/screens/chat'
 import { NeedsYou } from '@/screens/needs'
 import { Agent } from '@/screens/agent'
 import { Soon, SOON_TEXT } from '@/screens/soon'
+import { Files } from '@/screens/files'
 
 const isPage = (p: string | null): p is Page => PAGES.some(x => x.id === p)
 
@@ -84,6 +85,7 @@ export default function App() {
   else if (!ws || !state) body = null
   else if (page === 'chat') body = <Chat key={ws.slug} slug={ws.slug} name={ws.name} state={state} refresh={refresh} />
   else if (page === 'needs') body = <NeedsYou name={ws.name} state={state} refresh={refresh} />
+  else if (page === 'files') body = <Files key={ws.slug} slug={ws.slug} name={ws.name} tick={state.messages.length} />
   else if (page === 'agent') body = <Agent key={ws.slug} slug={ws.slug} name={ws.name} state={state} info={info} refresh={refresh} />
   else { const p = PAGES.find(x => x.id === page)!; body = <Soon name={ws.name} title={p.label} icon={p.icon} what={SOON_TEXT[page]} /> }
 
