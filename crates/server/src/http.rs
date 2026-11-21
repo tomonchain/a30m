@@ -94,7 +94,7 @@ fn handle(app: &Arc<App>, port: u16, mut request: Request) {
             ("Content-Type", "text/html; charset=utf-8"),
             (
                 "Content-Security-Policy",
-                "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'",
+                "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; font-src data:; connect-src 'self'; frame-ancestors 'none'",
             ),
             ("Referrer-Policy", "no-referrer"),
         ] {
@@ -174,9 +174,15 @@ fn route(app: &Arc<App>, method: &Method, parts: &[&str], body: &Value) -> Answe
                 .workspaces()
                 .into_iter()
                 .map(|w| {
+                    let image = app
+                        .home
+                        .workspace(&w.slug)
+                        .ok()
+                        .and_then(|ws| ws.image_version());
                     json!({
                         "slug": w.slug,
                         "name": w.name,
+                        "image": image,
                         "running": running.contains(&w.slug),
                         "waiting": app.approvals.pending(Some(&w.slug)).len(),
                     })
@@ -344,6 +350,40 @@ fn route(app: &Arc<App>, method: &Method, parts: &[&str], body: &Value) -> Answe
         (Method::Post, ["workspaces", slug, "providers", name, "models"]) => {
             let ws = app.home.workspace(slug).map_err(|e| (404, e))?;
             crate::keys::models(&ws, name).map_err(bad)
+        }
+        (Method::Post, ["workspaces", slug, "settings"]) => {
+            let mut ws = app.home.workspace(slug).map_err(|e| (404, e))?;
+            if let Some(name) = body.get("name").and_then(Value::as_str) {
+                let name = name.trim();
+                if name.is_empty() || name.chars().count() > 60 {
+                    return Err(bad("a name has 1 to 60 characters"));
+                }
+                ws.info.name = name.to_string();
+            }
+            if let Some(text) = body.get("description").and_then(Value::as_str) {
+                if text.chars().count() > 2000 {
+                    return Err(bad("a description has at most 2,000 characters"));
+                }
+                ws.info.description = text.trim().to_string();
+            }
+            ws.save_info().map_err(|e| (500, e))?;
+            Ok(json!({"workspace": ws.info}))
+        }
+        (Method::Get, ["workspaces", slug, "image"]) => {
+            let ws = app.home.workspace(slug).map_err(|e| (404, e))?;
+            let (bytes, mime) = ws.image().ok_or((404, "no picture".to_string()))?;
+            Ok(json!({"mime": mime, "data": crate::b64::encode(&bytes)}))
+        }
+        (Method::Post, ["workspaces", slug, "image"]) => {
+            let ws = app.home.workspace(slug).map_err(|e| (404, e))?;
+            let bytes = crate::b64::decode(text_of(body, "data")?).map_err(bad)?;
+            ws.save_image(&bytes).map_err(bad)?;
+            Ok(json!({"image": ws.image_version()}))
+        }
+        (Method::Post, ["workspaces", slug, "image", "remove"]) => {
+            let ws = app.home.workspace(slug).map_err(|e| (404, e))?;
+            ws.remove_image().map_err(|e| (500, e))?;
+            Ok(json!({"image": null}))
         }
         (Method::Get, ["approvals"]) => Ok(json!({"waiting": app.approvals.pending(None)})),
         (Method::Post, ["approvals", id]) => {

@@ -17,10 +17,10 @@ export type Approval = {
   created: number
 }
 
-export type WorkspaceSummary = { slug: string; name: string; waiting: number; running: boolean }
+export type WorkspaceSummary = { slug: string; name: string; image: number | null; waiting: number; running: boolean }
 
 export type WorkspaceState = {
-  workspace: { slug: string; name: string; created: number; tool_classes: Record<string, string>; model?: string }
+  workspace: { slug: string; name: string; description?: string; created: number; tool_classes: Record<string, string>; model?: string }
   model: string
   model_ready: boolean
   messages: Message[]
