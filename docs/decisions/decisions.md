@@ -145,7 +145,7 @@
 
 ## 157. A Rust server; the Mac client and the mobile app in Tauri 2
 
-**Proposed** (20 November 2026; the founder suggested Electron for the Mac app).
+**Accepted** (founder, 21 November 2026, "yes, that's fine"; proposed 20 November, when the founder suggested Electron for the Mac app).
 
 - **Server:** Rust, as v0.
 - **Mac client and mobile app:** Tauri 2. The interface is web (React and shadcn, decision 73); the app's core is Rust.
