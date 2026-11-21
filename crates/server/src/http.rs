@@ -217,6 +217,7 @@ fn route(app: &Arc<App>, method: &Method, parts: &[&str], body: &Value) -> Answe
             Ok(json!({
                 "workspace": ws.info,
                 "model": crate::model_of(app, &ws),
+                "model_ready": crate::connect_for(app, &ws).is_ok(),
                 "messages": ws.conversation(),
                 "running": running,
                 "error": error,
@@ -328,6 +329,21 @@ fn route(app: &Arc<App>, method: &Method, parts: &[&str], body: &Value) -> Answe
                 .approvals
                 .refuse_all(&ws.info.slug, "The owner stopped the agent.");
             Ok(json!({"refused": refused}))
+        }
+        (Method::Get, ["workspaces", slug, "providers"]) => {
+            let ws = app.home.workspace(slug).map_err(|e| (404, e))?;
+            Ok(
+                json!({"providers": crate::keys::providers(&ws), "model": crate::model_of(app, &ws)}),
+            )
+        }
+        (Method::Post, ["workspaces", slug, "providers", name]) => {
+            let ws = app.home.workspace(slug).map_err(|e| (404, e))?;
+            let key = body.get("key").and_then(Value::as_str).unwrap_or("").trim();
+            crate::keys::set(&ws, name, key).map_err(bad)
+        }
+        (Method::Post, ["workspaces", slug, "providers", name, "models"]) => {
+            let ws = app.home.workspace(slug).map_err(|e| (404, e))?;
+            crate::keys::models(&ws, name).map_err(bad)
         }
         (Method::Get, ["approvals"]) => Ok(json!({"waiting": app.approvals.pending(None)})),
         (Method::Post, ["approvals", id]) => {

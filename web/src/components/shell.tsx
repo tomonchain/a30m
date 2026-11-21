@@ -1,9 +1,9 @@
-import { Bell, Bot, Folder, MessageSquare, Moon, Plus, Repeat, Sparkles, Sun, Users, type LucideIcon } from 'lucide-react'
+import { Bell, Bot, Cpu, Folder, MessageSquare, Moon, Plus, Repeat, Sparkles, Sun, Users, type LucideIcon } from 'lucide-react'
 import type { WorkspaceState, WorkspaceSummary } from '@/lib/api'
 import { colour, initials } from '@/lib/colour'
 import { cn } from '@/lib/utils'
 
-export type Page = 'chat' | 'needs' | 'team' | 'routines' | 'files' | 'agent'
+export type Page = 'chat' | 'needs' | 'team' | 'routines' | 'files' | 'models' | 'agent'
 
 export const PAGES: { id: Page; label: string; icon: LucideIcon; soon?: boolean; group: 'top' | 'work' | 'settings' }[] = [
   { id: 'chat', label: 'Chat', icon: MessageSquare, group: 'top' },
@@ -11,6 +11,7 @@ export const PAGES: { id: Page; label: string; icon: LucideIcon; soon?: boolean;
   { id: 'team', label: 'Team', icon: Users, soon: true, group: 'work' },
   { id: 'routines', label: 'Routines', icon: Repeat, soon: true, group: 'work' },
   { id: 'files', label: 'Files', icon: Folder, group: 'work' },
+  { id: 'models', label: 'Models', icon: Cpu, group: 'settings' },
   { id: 'agent', label: 'Agent', icon: Bot, group: 'settings' },
 ]
 

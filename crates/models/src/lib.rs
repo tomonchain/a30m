@@ -22,6 +22,9 @@ pub struct Provider {
     pub base: &'static str,
     /// The environment variable holding the key; none for a local server.
     pub key_var: Option<&'static str>,
+    pub label: &'static str,
+    /// Where the owner creates a key.
+    pub key_url: &'static str,
 }
 
 pub const PROVIDERS: &[Provider] = &[
@@ -30,30 +33,40 @@ pub const PROVIDERS: &[Provider] = &[
         style: Style::Anthropic,
         base: "https://api.anthropic.com/v1",
         key_var: Some("ANTHROPIC_API_KEY"),
+        label: "Anthropic (Claude)",
+        key_url: "https://console.anthropic.com/settings/keys",
     },
     Provider {
         name: "openai",
         style: Style::OpenAi,
         base: "https://api.openai.com/v1",
         key_var: Some("OPENAI_API_KEY"),
+        label: "OpenAI (GPT)",
+        key_url: "https://platform.openai.com/api-keys",
     },
     Provider {
         name: "xai",
         style: Style::OpenAi,
         base: "https://api.x.ai/v1",
         key_var: Some("XAI_API_KEY"),
+        label: "xAI (Grok)",
+        key_url: "https://console.x.ai",
     },
     Provider {
         name: "gemini",
         style: Style::OpenAi,
         base: "https://generativelanguage.googleapis.com/v1beta/openai",
         key_var: Some("GEMINI_API_KEY"),
+        label: "Google (Gemini)",
+        key_url: "https://aistudio.google.com/apikey",
     },
     Provider {
         name: "ollama",
         style: Style::OpenAi,
         base: "http://127.0.0.1:11434/v1",
         key_var: None,
+        label: "Ollama, on the server",
+        key_url: "https://ollama.com/download",
     },
 ];
 
@@ -82,6 +95,11 @@ pub fn parse_spec(spec: &str) -> Result<(Provider, String), String> {
     Ok((*found, model.to_string()))
 }
 
+/// The provider's key from the server's environment.
+pub fn env_key(provider: &Provider) -> Option<String> {
+    key_of(provider)
+}
+
 fn key_of(provider: &Provider) -> Option<String> {
     let var = provider.key_var?;
     std::env::var(var)
@@ -99,26 +117,28 @@ pub fn available() -> Vec<&'static str> {
         .collect()
 }
 
-/// The model a spec names, ready to answer; or why not.
+/// The model a spec names, ready to answer; or why not. The key is
+/// the server's, from its environment.
 pub fn connect(spec: &str) -> Result<Box<dyn Model>, String> {
+    connect_with(spec, None)
+}
+
+/// As `connect`, with a key given by the workspace first (decision 167).
+pub fn connect_with(spec: &str, key: Option<String>) -> Result<Box<dyn Model>, String> {
     if spec.trim() == "echo" {
         return Ok(Box::new(Echo));
     }
     let (provider, model) = parse_spec(spec)?;
     let key = match provider.key_var {
-        Some(var) => key_of(&provider).ok_or_else(|| {
+        Some(var) => key.or_else(|| key_of(&provider)).ok_or_else(|| {
             format!(
-                "no key for {}: set {var} where the server runs",
-                provider.name
+                "no key for {}: add one in this workspace's Settings, or set {var} where the server runs",
+                provider.label
             )
         })?,
         None => String::new(),
     };
-    let agent: ureq::Agent = ureq::Agent::config_builder()
-        .http_status_as_error(false)
-        .timeout_global(Some(Duration::from_secs(600)))
-        .build()
-        .into();
+    let agent = http_agent(600);
     let base = provider.base.to_string();
     Ok(match provider.style {
         Style::Anthropic => Box::new(Anthropic {
@@ -136,6 +156,121 @@ pub fn connect(spec: &str) -> Result<Box<dyn Model>, String> {
     })
 }
 
+fn http_agent(seconds: u64) -> ureq::Agent {
+    ureq::Agent::config_builder()
+        .http_status_as_error(false)
+        .timeout_global(Some(Duration::from_secs(seconds)))
+        .build()
+        .into()
+}
+
+fn get(agent: &ureq::Agent, url: &str, headers: &[(&str, &str)]) -> Result<Value, String> {
+    let mut request = agent.get(url);
+    for (k, v) in headers {
+        request = request.header(*k, *v);
+    }
+    let mut response = request
+        .call()
+        .map_err(|e| format!("model provider unreachable: {e}"))?;
+    read_answer(&mut response)
+}
+
+/// The models a key gives access to, to choose from. Listing them is also
+/// how a key is tried before it is kept: a wrong key fails here.
+pub fn list_models(provider: &str, key: Option<&str>) -> Result<Vec<String>, String> {
+    let p = PROVIDERS
+        .iter()
+        .find(|p| p.name == provider)
+        .ok_or_else(|| format!("unknown provider {provider}"))?;
+    let key = key
+        .map(str::to_string)
+        .or_else(|| key_of(p))
+        .unwrap_or_default();
+    if p.key_var.is_some() && key.is_empty() {
+        return Err(format!("no key for {}", p.label));
+    }
+    let agent = http_agent(30);
+    let mut ids = match p.name {
+        "anthropic" => {
+            let v = get(
+                &agent,
+                &format!("{}/models?limit=100", p.base),
+                &[("x-api-key", &key), ("anthropic-version", "2023-06-01")],
+            )?;
+            ids_of(&v, "/data", "id")
+        }
+        // Gemini's compatible mode does not list models reliably; its own
+        // API does.
+        "gemini" => {
+            let v = get(
+                &agent,
+                "https://generativelanguage.googleapis.com/v1beta/models?pageSize=200",
+                &[("x-goog-api-key", &key)],
+            )?;
+            v.get("models")
+                .and_then(Value::as_array)
+                .into_iter()
+                .flatten()
+                .filter(|m| {
+                    m.get("supportedGenerationMethods")
+                        .and_then(Value::as_array)
+                        .is_some_and(|a| a.iter().any(|x| x == "generateContent"))
+                })
+                .filter_map(|m| m.get("name").and_then(Value::as_str))
+                .map(|n| n.trim_start_matches("models/").to_string())
+                .collect()
+        }
+        _ => {
+            let auth = format!("Bearer {key}");
+            let headers: &[(&str, &str)] = if key.is_empty() {
+                &[]
+            } else {
+                &[("authorization", &auth)]
+            };
+            let v = get(&agent, &format!("{}/models", p.base), headers)?;
+            ids_of(&v, "/data", "id")
+        }
+    };
+    ids.retain(|id| chat_model(id));
+    ids.sort();
+    ids.dedup();
+    Ok(ids)
+}
+
+fn ids_of(v: &Value, list: &str, field: &str) -> Vec<String> {
+    v.pointer(list)
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|m| m.get(field).and_then(Value::as_str).map(String::from))
+        .collect()
+}
+
+/// Leaves out models that cannot hold a conversation (images, speech,
+/// embeddings), which some providers list with the others.
+pub fn chat_model(id: &str) -> bool {
+    let id = id.to_ascii_lowercase();
+    ![
+        "embed",
+        "tts",
+        "whisper",
+        "dall-e",
+        "moderation",
+        "transcribe",
+        "realtime",
+        "audio",
+        "image",
+        "imagen",
+        "veo",
+        "davinci",
+        "babbage",
+        "sora",
+        "aqa",
+    ]
+    .iter()
+    .any(|w| id.contains(w))
+}
+
 fn post(
     agent: &ureq::Agent,
     url: &str,
@@ -149,6 +284,10 @@ fn post(
     let mut response = request
         .send(body.to_string())
         .map_err(|e| format!("model provider unreachable: {e}"))?;
+    read_answer(&mut response)
+}
+
+fn read_answer(response: &mut ureq::http::Response<ureq::Body>) -> Result<Value, String> {
     let status = response.status().as_u16();
     let text = response
         .body_mut()
@@ -596,6 +735,21 @@ mod tests {
         let blocks = anthropic_parse(&answer).unwrap();
         assert_eq!(blocks.len(), 2);
         assert!(matches!(&blocks[1], Block::ToolUse { name, .. } if name == "read_file"));
+    }
+
+    #[test]
+    fn only_conversation_models_are_offered() {
+        assert!(chat_model("gpt-6.1-sol"));
+        assert!(chat_model("claude-sonnet-5-5"));
+        assert!(!chat_model("text-embedding-3-large"));
+        assert!(!chat_model("gpt-image-2"));
+        assert!(!chat_model("tts-1"));
+    }
+
+    #[test]
+    fn a_workspace_key_comes_first() {
+        assert!(connect_with("xai/grok-4.7", Some("xk-test".into())).is_ok());
+        assert!(list_models("acme", None).is_err());
     }
 
     #[test]

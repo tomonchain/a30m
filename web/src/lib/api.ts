@@ -22,12 +22,24 @@ export type WorkspaceSummary = { slug: string; name: string; waiting: number; ru
 export type WorkspaceState = {
   workspace: { slug: string; name: string; created: number; tool_classes: Record<string, string>; model?: string }
   model: string
+  model_ready: boolean
   messages: Message[]
   running: boolean
   waiting: Approval[]
   error: string | null
   skills: { name: string; description: string }[]
   mcp: { declared: string[]; running: { name: string; tools: number }[]; errors: string[] }
+}
+
+export type Provider = {
+  name: string
+  label: string
+  kind: 'model' | 'search'
+  key_url: string
+  needs_key: boolean
+  /// Where the key comes from: this workspace, the server, or none needed.
+  source: 'workspace' | 'server' | 'local' | null
+  hint: string | null
 }
 
 export type Info = {
