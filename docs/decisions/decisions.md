@@ -1,5 +1,20 @@
 # Decisions
 
+## 167. The owner connects models per workspace, in the interface
+
+**Proposed** (founder, 21 November 2026: "prepare the onboarding, and settings per workspace to connect the LLMs"). Changes decision 166, where keys came only from the server's environment.
+
+- **Each workspace holds its own keys:** Anthropic, OpenAI, xAI, Gemini, and the web search's (Brave). The owner pastes a key in the workspace's Settings, or during onboarding. A workspace can bill a company's account and another the owner's own, and one workspace's keys never serve another.
+- **A key is tried before it is kept:** a30m lists the provider's models with it. A wrong key is refused and not stored. The models listed are offered to choose from.
+- **Where keys live:** `secrets.json` in the workspace's folder on the server, readable by the server's user only (mode 600), outside `files/` and `agent/`, so no agent tool reaches it. Not in `workspace.json`, never in a conversation, a log, a tool's input or an import.
+- **The API never returns a key:** it says whether one is set, where from (this workspace or the server), and its last four characters.
+- **A workspace's key comes first, then the server's environment**, so a server set up with keys works with no setting at all.
+- **Onboarding:** the first visit asks for a workspace's name, then connects a model (paste a key, or Ollama on the server), then the agent's instructions (optional). A workspace with no usable model says so in its chat and leads to its Settings.
+
+*Why:* the owner sets a30m up from the interface, without a terminal, and each workspace's spending goes to the right account. Trying a key before keeping it catches typos at the moment they are made.
+
+*Cost:* keys now rest on the server's disk, in clear, protected by the file's mode and the server user's account. Encrypting them at rest needs a key held elsewhere (the OS keychain on the Mac, a passphrase on a VPS): decided with pairing (158). A workspace's keys are lost with its folder.
+
 ## 166. Our own model connectors first; the vendors' agents as optional subscription engines
 
 **Proposed** (founder, 20 November 2026: "I want it to connect to my Claude subscription, add all my subscriptions and switch between them"; "more economical to use the subscription"; "unify everything"; then "or we redo the connectors for the main LLMs, GPT, Claude, Grok, Gemini").
